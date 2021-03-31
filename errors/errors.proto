@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package errors;
+
+// Error is the error message that has id, it's code and a detail.
+message Error {
+  string id = 1;
+  uint32 code = 2;
+  string detail = 3;
+  string process = 4;
+  map<string, string> meta = 5;
+}
