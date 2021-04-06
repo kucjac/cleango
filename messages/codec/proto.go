@@ -6,6 +6,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Proto gets std protobuf codec.
+func Proto() Codec {
+	return &protoCodec{}
+}
+
 var _ Codec = (*protoCodec)(nil)
 
 type protoCodec struct{}

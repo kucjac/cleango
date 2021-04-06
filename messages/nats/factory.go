@@ -7,8 +7,9 @@ import (
 	"github.com/nats-io/stan.go"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/kucjac/cleango/messages"
+	"github.com/kucjac/cleango/errors"
 	"github.com/kucjac/cleango/messages/codec"
+	logger2 "github.com/kucjac/cleango/messages/internal/logger"
 	"github.com/kucjac/cleango/messages/pubsub"
 	"github.com/kucjac/cleango/xlog"
 )
@@ -21,7 +22,6 @@ var (
 // factory is the nats publisher and subscriber factory adapter.
 type factory struct {
 	Conn   stan.Conn
-	Codec  codec.Codec
 	Logger watermill.LoggerAdapter
 }
 
@@ -36,15 +36,14 @@ func (f *factory) SubscriberFactory() pubsub.SubscriberFactory {
 }
 
 // NewFactory creates new nats.factory for the messages.SubscriberFactory and messages.PublisherFactory interfaces.
-func NewFactory(c codec.Codec, config nats.StanConnConfig, logger xlog.Logger) (pubsub.Factory, error) {
+func NewFactory(config nats.StanConnConfig, logger xlog.Logger) (pubsub.Factory, error) {
 	s, err := nats.NewStanConnection(&config)
 	if err != nil {
 		return nil, err
 	}
 	return &factory{
 		Conn:   s,
-		Codec:  c,
-		Logger: messages.NewLoggerAdapter(logger),
+		Logger: logger2.NewLoggerAdapter(logger),
 	}, nil
 }
 
@@ -83,12 +82,15 @@ func (f *factory) NewSubscriber(options ...pubsub.SubscriptionOption) (pubsub.Su
 
 // NewPublisher creates new messages publisher.
 // Implements messages.PublisherFactory
-func (f *factory) NewPublisher() (pubsub.Publisher, error) {
+func (f *factory) NewPublisher(c codec.Codec) (pubsub.Publisher, error) {
+	if c == nil {
+		return nil, errors.ErrInternal("no codec provided for publisher")
+	}
 	natsPub, err := nats.NewStreamingPublisherWithStanConn(f.Conn, nats.StreamingPublisherPublishConfig{Marshaler: nats.GobMarshaler{}}, f.Logger)
 	if err != nil {
 		return nil, err
 	}
-	return &publisher{pub: natsPub}, nil
+	return &publisher{pub: natsPub, c: c}, nil
 }
 
 // publisher is the nats publisher implementation.
@@ -111,6 +113,7 @@ func (p *publisher) PublishMessage(topic string, msg interface{}, options ...pub
 	for _, option := range options {
 		option(m)
 	}
+
 	if m.UUID == "" {
 		m.UUID = uuid.NewV4().String()
 	}

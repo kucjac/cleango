@@ -9,10 +9,10 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/kucjac/cleango/errors"
-	"github.com/kucjac/cleango/eventstore"
+	"github.com/kucjac/cleango/eventsource"
 )
 
-var _ eventstore.Storage = (*sqlStorage)(nil)
+var _ eventsource.Storage = (*sqlStorage)(nil)
 
 // Config is the configuration for the event storage.
 type Config struct {
@@ -53,7 +53,7 @@ func (c *Config) snapshotTableName() string {
 }
 
 // New creates a new event storage based on provided sqlx connection.
-func New(conn *sqlx.DB, cfg *Config, isErrDupFunc IsErrDuplicatedFunc) (eventstore.Storage, error) {
+func New(conn *sqlx.DB, cfg *Config, isErrDupFunc IsErrDuplicatedFunc) (eventsource.Storage, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -111,8 +111,8 @@ func newQueries(conn *sqlx.DB, c *Config) queries {
 }
 
 // SaveEvents stores provided events in the database.
-// Implements eventstore.Storage interface.
-func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventstore.Event) error {
+// Implements eventsource.Storage interface.
+func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) error {
 	var (
 		query  string
 		values []interface{}
@@ -184,17 +184,17 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventstore.Event) err
 }
 
 // GetEventStream gets the event stream for provided aggregate.
-// Implements eventstore.Storage interface.
-func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventstore.Event, error) {
+// Implements eventsource.Storage interface.
+func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getEventStream, aggId, aggType)
 	if err != nil {
 		return nil, errors.ErrInternal(err.Error())
 	}
 	defer rows.Close()
 
-	var stream []*eventstore.Event
+	var stream []*eventsource.Event
 	for rows.Next() {
-		e := &eventstore.Event{}
+		e := &eventsource.Event{}
 		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
 		if err = rows.Scan(&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData); err != nil {
 			return nil, errors.ErrInternalf("scanning  event row failed: %v", err.Error())
@@ -214,8 +214,8 @@ func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) 
 }
 
 // SaveSnapshot stores the snapshot in the database.
-// Implements eventstore.Storage interface.
-func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventstore.Snapshot) error {
+// Implements eventsource.Storage interface.
+func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapshot) error {
 	// aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data
 	_, err := s.conn.ExecContext(ctx, s.query.saveSnapshot, snap.AggregateId, snap.AggregateType, snap.AggregateVersion, snap.Revision, snap.Timestamp, snap.SnapshotData)
 	if err != nil {
@@ -231,8 +231,8 @@ func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventstore.Snapshot
 }
 
 // GetSnapshot gets the latest snapshot for given aggregate.
-// Implements eventstore.Storage interface.
-func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*eventstore.Snapshot, error) {
+// Implements eventsource.Storage interface.
+func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*eventsource.Snapshot, error) {
 	// aggregate_id = ? AND aggregate_type = ? AND aggregate_version = ?
 	row := s.conn.QueryRowContext(ctx, s.query.getSnapshot, aggId, aggType, aggVersion)
 	if err := row.Err(); err != nil {
@@ -243,7 +243,7 @@ func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType stri
 	}
 
 	// aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data
-	var snap eventstore.Snapshot
+	var snap eventsource.Snapshot
 	if err := row.Scan(&snap.AggregateId, &snap.AggregateType, &snap.AggregateVersion, &snap.Revision, &snap.Timestamp, &snap.SnapshotData); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrNotFound("snapshot not found")
@@ -254,16 +254,16 @@ func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType stri
 }
 
 // GetStreamFromRevision gets the event stream for given aggregate where the revision is subsequent from provided.
-func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventstore.Event, error) {
+func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getStreamFromRevision, aggId, aggType, from)
 	if err != nil {
 		return nil, errors.ErrInternal(err.Error())
 	}
 	defer rows.Close()
 
-	var stream []*eventstore.Event
+	var stream []*eventsource.Event
 	for rows.Next() {
-		e := &eventstore.Event{}
+		e := &eventsource.Event{}
 		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
 		if err = rows.Scan(&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData); err != nil {
 			return nil, errors.ErrInternalf("scanning  event row failed: %v", err.Error())

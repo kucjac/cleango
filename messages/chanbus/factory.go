@@ -6,8 +6,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/kucjac/cleango/messages"
+	"github.com/kucjac/cleango/errors"
 	"github.com/kucjac/cleango/messages/codec"
+	logger2 "github.com/kucjac/cleango/messages/internal/logger"
 	"github.com/kucjac/cleango/messages/pubsub"
 	"github.com/kucjac/cleango/xlog"
 )
@@ -19,31 +20,41 @@ var (
 )
 
 // New creates a new factory.
-func New(c codec.Codec, cfg gochannel.Config, logger xlog.Logger) pubsub.Factory {
-	logAdapter := messages.NewLoggerAdapter(logger)
+func New(cfg gochannel.Config, logger xlog.Logger) pubsub.Factory {
+	logAdapter := logger2.NewLoggerAdapter(logger)
 	return &factory{
 		gc:         gochannel.NewGoChannel(cfg, logAdapter),
-		c:          c,
 		logAdapter: logAdapter,
 	}
 }
 
 type factory struct {
 	gc         *gochannel.GoChannel
-	c          codec.Codec
 	logAdapter watermill.LoggerAdapter
 }
 
+// PublisherFactory implements pubsub.Factory interface.
 func (f *factory) PublisherFactory() pubsub.PublisherFactory {
 	return f
 }
 
+// SubscriberFactory implements pubsub.Factory interface.
 func (f *factory) SubscriberFactory() pubsub.SubscriberFactory {
 	return f
 }
 
+// NewSubscriber implements pubsub.SubscriberFactory interface.
 func (f *factory) NewSubscriber(_ ...pubsub.SubscriptionOption) (pubsub.Subscriber, error) {
 	return f.gc, nil
+}
+
+// NewPublisher creates new channel based publisher.
+// Implements pubsub.PublisherFactory.
+func (f *factory) NewPublisher(c codec.Codec) (pubsub.Publisher, error) {
+	if c == nil {
+		return nil, errors.ErrInternal("no codec provided for chan publisher")
+	}
+	return &publisher{g: f.gc, c: c}, nil
 }
 
 type publisher struct {
@@ -73,10 +84,8 @@ func (p *publisher) PublishMessage(topic string, msg interface{}, options ...pub
 	return p.g.Publish(topic, m)
 }
 
+// Close closes given publisher connection.
+// Implements pubsub.Publisher interface.
 func (p *publisher) Close() error {
 	return p.g.Close()
-}
-
-func (f *factory) NewPublisher() (pubsub.Publisher, error) {
-	return &publisher{g: f.gc}, nil
 }

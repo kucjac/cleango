@@ -1,4 +1,4 @@
-package eventstore
+package eventsource
 
 import (
 	"context"
@@ -8,49 +8,40 @@ import (
 	"github.com/kucjac/cleango/messages/codec"
 )
 
+//go:generate mockgen -destination=internal/storemock/store_gen.go -package=storemock . Store
+
 // EventStore is an interface used as an event store. It allows to operate on the event source storage.
 type EventStore interface {
-	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
-	GetStream(ctx context.Context, aggregate Aggregate) error
-	GetStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
+	AggregateBaseSetter
+	Store
+}
+
+// Store is an interface used by the event store to load, commit and create snapshot on aggregates.
+type Store interface {
+	LoadEventStream(ctx context.Context, aggregate Aggregate) error
+	LoadEventStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
 	Commit(ctx context.Context, aggregate Aggregate) error
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
 }
 
-// New creates new event store implementation.
+// New creates new EventStore implementation.
 func New(eventCodec codec.Codec, snapCodec codec.Codec, storage Storage) EventStore {
 	return &eventStore{
-		eventCodec: eventCodec,
-		snapCodec:  snapCodec,
-		idGen:      UUIDGenerator{},
-		storage:    storage,
+		AggregateBaseSetter: NewAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
+		snapCodec:           snapCodec,
+		storage:             storage,
 	}
 }
 
 type eventStore struct {
-	eventCodec codec.Codec
-	snapCodec  codec.Codec
-	idGen      IdGenerator
-	storage    Storage
-}
-
-// SetAggregateBase creates a new aggregate base for given aggregate.
-func (e *eventStore) SetAggregateBase(agg Aggregate, aggId, aggType string, version int64) {
-	base := &AggregateBase{
-		id:         aggId,
-		aggType:    aggType,
-		agg:        agg,
-		eventCodec: e.eventCodec,
-		snapCodec:  e.snapCodec,
-		idGen:      e.idGen,
-		version:    version,
-	}
-	agg.SetBase(base)
+	AggregateBaseSetter
+	snapCodec codec.Codec
+	storage   Storage
 }
 
 // GetStream gets the event stream and applies on provided aggregate.
-func (e *eventStore) GetStream(ctx context.Context, agg Aggregate) error {
-	b := agg.Base()
+func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
+	b := agg.AggBase()
 	// Get the full event stream for given aggregate.
 	events, err := e.storage.GetEventStream(ctx, b.id, b.aggType)
 	if err != nil {
@@ -72,9 +63,9 @@ func (e *eventStore) GetStream(ctx context.Context, agg Aggregate) error {
 }
 
 // GetStreamWithSnapshot gets the aggregate stream with the latest possible snapshot.
-func (e *eventStore) GetStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
+func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
 	// At first try to get the snapshot for given aggregate.
-	b := agg.Base()
+	b := agg.AggBase()
 	snap, err := e.storage.GetSnapshot(ctx, b.id, b.aggType, b.version)
 	isNotFound := errors.IsNotFound(err)
 	if err != nil && !isNotFound {
@@ -116,7 +107,7 @@ func (e *eventStore) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 	if err != nil {
 		return err
 	}
-	b := agg.Base()
+	b := agg.AggBase()
 	snap := &Snapshot{
 		AggregateId:      b.id,
 		AggregateType:    b.aggType,
@@ -133,7 +124,7 @@ func (e *eventStore) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 
 // Commit commits provided aggregate events. In case when the
 func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
-	b := agg.Base()
+	b := agg.AggBase()
 	events := b.uncommittedEvents
 	for {
 		err := e.storage.SaveEvents(ctx, events)
@@ -150,7 +141,7 @@ func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
 		// Reset aggregate and it's base.
 		agg.Reset()
 		b.reset()
-		if err = e.GetStreamWithSnapshot(ctx, agg); err != nil {
+		if err = e.LoadEventStreamWithSnapshot(ctx, agg); err != nil {
 			return err
 		}
 

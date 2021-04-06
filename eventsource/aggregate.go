@@ -1,4 +1,4 @@
-package eventstore
+package eventsource
 
 import (
 	"time"
@@ -9,9 +9,8 @@ import (
 // Aggregate is an interface used for the aggregate models
 type Aggregate interface {
 	Apply(e *Event) error
-	Validate() error
 	SetBase(base *AggregateBase)
-	Base() *AggregateBase
+	AggBase() *AggregateBase
 	Reset()
 }
 
@@ -28,6 +27,11 @@ type AggregateBase struct {
 	committedEvents   []*Event
 	revision          int64
 	version           int64
+}
+
+// SetID sets aggregate id.
+func (a *AggregateBase) SetID(id string) {
+	a.id = id
 }
 
 // ID gets the aggregate identifier.
@@ -85,6 +89,14 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 // CommittedEvents gets the committed event messages.
 func (a *AggregateBase) CommittedEvents() []*Event {
 	return a.committedEvents
+}
+
+// LatestCommittedEvent gets the latest committed event message.
+func (a *AggregateBase) LatestCommittedEvent() (*Event, bool) {
+	if len(a.committedEvents) > 0 {
+		return a.committedEvents[len(a.committedEvents)-1], true
+	}
+	return nil, false
 }
 
 // DecodeEventAs decodes provided in put eventData into the structure of eventMsg.

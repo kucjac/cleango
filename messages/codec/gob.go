@@ -5,6 +5,11 @@ import (
 	"encoding/gob"
 )
 
+// GOB gets std gob codec.
+func GOB() Codec {
+	return &gobCodec{}
+}
+
 var _ Codec = (*gobCodec)(nil)
 
 type gobCodec struct{}

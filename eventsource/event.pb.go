@@ -4,7 +4,7 @@
 // 	protoc        v3.14.0
 // source: es/event.proto
 
-package eventstore
+package eventsource
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

@@ -1,4 +1,4 @@
-package messages
+package logger
 
 import (
 	"github.com/ThreeDotsLabs/watermill"

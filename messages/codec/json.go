@@ -4,6 +4,11 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+// JSON gets std json codec implementation.
+func JSON() Codec {
+	return &jsonCodec{}
+}
+
 var _ Codec = (*jsonCodec)(nil)
 
 type jsonCodec struct{}

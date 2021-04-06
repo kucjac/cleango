@@ -3,6 +3,7 @@ package mockbus
 import (
 	"github.com/golang/mock/gomock"
 
+	"github.com/kucjac/cleango/messages/codec"
 	"github.com/kucjac/cleango/messages/pubsub"
 )
 
@@ -17,7 +18,7 @@ type MockPublisherFactory struct {
 }
 
 // NewPublisher creates new mocked publisher.
-func (m MockPublisherFactory) NewPublisher() (pubsub.Publisher, error) {
+func (m MockPublisherFactory) NewPublisher(codec.Codec) (pubsub.Publisher, error) {
 	return NewMockPublisher(m.m), nil
 }
 

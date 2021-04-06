@@ -6,6 +6,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
+	"github.com/kucjac/cleango/messages/codec"
 	"github.com/kucjac/cleango/meta"
 )
 
@@ -79,7 +80,7 @@ type SubscribeInitializer interface {
 
 // PublisherFactory is the factory for the publishers.
 type PublisherFactory interface {
-	NewPublisher() (Publisher, error)
+	NewPublisher(c codec.Codec) (Publisher, error)
 }
 
 // SubscriberFactory is the factory for the subscribers.

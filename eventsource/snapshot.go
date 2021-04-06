@@ -1,4 +1,4 @@
-package eventstore
+package eventsource
 
 // Snapshot is a structure that define basic fields of the aggregate snapshot.
 type Snapshot struct {
