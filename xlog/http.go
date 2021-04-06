@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/kucjac/cleango/errors"
 )
 
 // HTTPRequest for logging HTTP requests. Only contains semantics
@@ -61,7 +63,21 @@ type HTTPRequest struct {
 // to log http request data
 const HTTPRequestKey = "http:request"
 
+// NoHTTPOpt means no request ke was found
+var NoHTTPOpt = errors.ErrInvalidArgument("logging - no http request found")
 
+// ExtractHTTPField will extract http option
+func ExtractHTTPField(r logrus.Fields) (HTTPRequest, error) {
+	reqData, ok := r[HTTPRequestKey]
+	if !ok {
+		return HTTPRequest{}, NoHTTPOpt
+	}
+	req, ok := reqData.(HTTPRequest)
+	if !ok {
+		return HTTPRequest{}, errors.ErrInternalf("logging invlid type of http request: %T", reqData)
+	}
+	return req, nil
+}
 
 // ReqWrap will put xlog into request context
 func ReqWrap(req *http.Request, entry *logrus.Entry) *http.Request {

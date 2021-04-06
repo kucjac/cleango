@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/kucjac/cleango/errors"
 )
 
 // TextFormatter is struct implementing Format interface
@@ -32,9 +34,11 @@ func NewTextFormatter(colors bool) *TextFormatter {
 // Format to make interface `logrus.Formatter` happy. It will take entry
 // and covert it into byte stream.
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	x, errSet := ExtractHTTPField(entry.Data)
-	switch errSet {
-	case nil:
+	x, err := ExtractHTTPField(entry.Data)
+	if err != nil && !errors.Is(err, NoHTTPOpt) {
+		return nil, err
+	}
+	if err == nil {
 		entry.Message = fmt.Sprintf(
 			"[%s] %d | %8v | %15s",
 			x.RequestMethod,
@@ -43,9 +47,6 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 			x.RequestURL,
 		)
 		delete(entry.Data, HTTPRequestKey)
-	case NoHTTPOpt:
-	default:
-		return nil, errSet
 	}
 	var b *bytes.Buffer
 	var keys = make([]string, 0, len(entry.Data))
