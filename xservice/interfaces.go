@@ -11,3 +11,8 @@ type Transactioner interface {
 	Commit() error
 	Rollback() error
 }
+
+// Runner is an interface used for the services which allows to run it.
+type Runner interface {
+	Run() error
+}
