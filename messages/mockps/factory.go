@@ -1,4 +1,4 @@
-package mockbus
+package mockps
 
 import (
 	"github.com/golang/mock/gomock"

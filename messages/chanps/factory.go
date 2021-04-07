@@ -1,4 +1,4 @@
-package chanbus
+package chanps
 
 import (
 	"github.com/ThreeDotsLabs/watermill"

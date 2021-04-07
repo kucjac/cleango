@@ -1,4 +1,4 @@
-package nats
+package natsps
 
 import (
 	"github.com/ThreeDotsLabs/watermill"
