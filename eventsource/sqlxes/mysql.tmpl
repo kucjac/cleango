@@ -1,4 +1,4 @@
-CREATE TABLE event_store (
+CREATE TABLE {{.EventTable}} (
     event_id varchar(255) NOT NULL,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
@@ -9,9 +9,9 @@ CREATE TABLE event_store (
     CONSTRAINT aggregate_revision UNIQUE (aggregate_id, revision)
 );
 
-ALTER TABLE event_store ADD PRIMARY KEY (event_id);
+ALTER TABLE {{.EventTable}} ADD PRIMARY KEY (event_id);
 
-CREATE TABLE snapshot (
+CREATE TABLE {{.SnapshotTable}} (
     id bigint NOT NULL,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
@@ -21,5 +21,5 @@ CREATE TABLE snapshot (
     snapshot_data blob
 );
 
-ALTER TABLE snapshot ADD PRIMARY KEY (id);
-ALTER TABLE snapshot MODIFY COLUMN id bigint NOT NULL AUTO_INCREMENT;
+ALTER TABLE {{.SnapshotTable}} ADD PRIMARY KEY (id);
+ALTER TABLE {{.SnapshotTable}} MODIFY COLUMN id bigint NOT NULL AUTO_INCREMENT;

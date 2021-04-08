@@ -1,0 +1,23 @@
+CREATE TABLE {{.EventTable}} (
+    event_id varchar(255) NOT NULL,
+    aggregate_id varchar(255) NOT NULL,
+    aggregate_type varchar(255) NOT NULL,
+    revision integer NOT NULL,
+    timestamp bigint NOT NULL,
+    event_type varchar(255) NOT NULL,
+    event_data bytea,
+    CONSTRAINT aggregate_revision UNIQUE (aggregate_id, revision)
+);
+
+ALTER TABLE {{.EventTable}} ADD PRIMARY KEY (event_id);
+
+CREATE TABLE {{.SnapshotTable}} (
+    id BIGSERIAL NOT NULL PRIMARY KEY,
+    aggregate_id varchar(255) NOT NULL,
+    aggregate_type varchar(255) NOT NULL,
+    aggregate_version integer NOT NULL,
+    revision integer NOT NULL,
+    timestamp bigint NOT NULL,
+    snapshot_data bytea
+);
+
