@@ -9,7 +9,6 @@ import (
 
 	"github.com/kucjac/cleango/errors"
 	"github.com/kucjac/cleango/messages/codec"
-	logger2 "github.com/kucjac/cleango/messages/internal/logger"
 	"github.com/kucjac/cleango/messages/pubsub"
 	"github.com/kucjac/cleango/xlog"
 )
@@ -43,7 +42,7 @@ func NewFactory(config nats.StanConnConfig, logger xlog.Logger) (pubsub.Factory,
 	}
 	return &factory{
 		Conn:   s,
-		Logger: logger2.NewLoggerAdapter(logger),
+		Logger: pubsub.NewLoggerAdapter(logger),
 	}, nil
 }
 
