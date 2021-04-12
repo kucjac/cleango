@@ -1,8 +1,15 @@
 package xpg
 
 import (
+	"context"
+
 	"github.com/go-pg/pg/v10"
+
 	"github.com/kucjac/cleango/errors"
+)
+
+const (
+	errCancelled = "57014"
 )
 
 // ErrWrapf takes error returned from Postgres and returns structured error.
@@ -24,8 +31,8 @@ func ErrWrapf(e error, process string, fmt string, args ...interface{}) error {
 			return errors.ErrAlreadyExistsf(fmt, args...).WithProcess(process)
 		}
 		if typed.Field('C') == errCancelled {
-			fmt += " %s"
-			args = append(args, context.Canceled.Error())
+			fmt += " %v"
+			args = append(args, context.Canceled)
 			return errors.ErrDeadlineExceededf(fmt, args).WithProcess(process)
 		}
 		args = append(args, e.Error())

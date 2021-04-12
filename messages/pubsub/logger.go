@@ -1,4 +1,4 @@
-package logger
+package pubsub
 
 import (
 	"github.com/ThreeDotsLabs/watermill"

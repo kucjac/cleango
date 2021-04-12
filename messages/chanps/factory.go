@@ -8,7 +8,6 @@ import (
 
 	"github.com/kucjac/cleango/errors"
 	"github.com/kucjac/cleango/messages/codec"
-	logger2 "github.com/kucjac/cleango/messages/internal/logger"
 	"github.com/kucjac/cleango/messages/pubsub"
 	"github.com/kucjac/cleango/xlog"
 )
@@ -21,7 +20,7 @@ var (
 
 // New creates a new factory.
 func New(cfg gochannel.Config, logger xlog.Logger) pubsub.Factory {
-	logAdapter := logger2.NewLoggerAdapter(logger)
+	logAdapter := pubsub.NewLoggerAdapter(logger)
 	return &factory{
 		gc:         gochannel.NewGoChannel(cfg, logAdapter),
 		logAdapter: logAdapter,

@@ -1,7 +1,7 @@
 package xpg
 
 import (
-	"fmt"
+	"github.com/go-pg/pg/v10"
 
 	"github.com/kucjac/cleango/errors"
 )
