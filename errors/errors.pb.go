@@ -32,62 +32,62 @@ type Error struct {
 	XXX_sizecache        int32             `json:"-"`
 }
 
-func (m *Error) Reset()         { *m = Error{} }
-func (m *Error) String() string { return proto.CompactTextString(m) }
+func (x *Error) Reset()         { *x = Error{} }
+func (x *Error) String() string { return proto.CompactTextString(x) }
 func (*Error) ProtoMessage()    {}
 func (*Error) Descriptor() ([]byte, []int) {
 	return fileDescriptor_24fe73c7f0ddb19c, []int{0}
 }
 
-func (m *Error) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_Error.Unmarshal(m, b)
+func (x *Error) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Error.Unmarshal(x, b)
 }
-func (m *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_Error.Marshal(b, m, deterministic)
+func (x *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Error.Marshal(b, x, deterministic)
 }
-func (m *Error) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Error.Merge(m, src)
+func (x *Error) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Error.Merge(x, src)
 }
-func (m *Error) XXX_Size() int {
-	return xxx_messageInfo_Error.Size(m)
+func (x *Error) XXX_Size() int {
+	return xxx_messageInfo_Error.Size(x)
 }
-func (m *Error) XXX_DiscardUnknown() {
-	xxx_messageInfo_Error.DiscardUnknown(m)
+func (x *Error) XXX_DiscardUnknown() {
+	xxx_messageInfo_Error.DiscardUnknown(x)
 }
 
 var xxx_messageInfo_Error proto.InternalMessageInfo
 
-func (m *Error) GetId() string {
-	if m != nil {
-		return m.Id
+func (x *Error) GetId() string {
+	if x != nil {
+		return x.Id
 	}
 	return ""
 }
 
-func (m *Error) GetCode() uint32 {
-	if m != nil {
-		return m.Code
+func (x *Error) GetCode() uint32 {
+	if x != nil {
+		return x.Code
 	}
 	return 0
 }
 
-func (m *Error) GetDetail() string {
-	if m != nil {
-		return m.Detail
+func (x *Error) GetDetail() string {
+	if x != nil {
+		return x.Detail
 	}
 	return ""
 }
 
-func (m *Error) GetProcess() string {
-	if m != nil {
-		return m.Process
+func (x *Error) GetProcess() string {
+	if x != nil {
+		return x.Process
 	}
 	return ""
 }
 
-func (m *Error) GetMeta() map[string]string {
-	if m != nil {
-		return m.Meta
+func (x *Error) GetMeta() map[string]string {
+	if x != nil {
+		return x.Meta
 	}
 	return nil
 }

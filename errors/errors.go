@@ -15,30 +15,30 @@ import (
 //go:generate protoc -I. --go_out=paths=source_relative:. errors.proto
 
 // Error implements error interface.
-func (m *Error) Error() string {
-	b, _ := json.Marshal(m)
+func (x *Error) Error() string {
+	b, _ := json.Marshal(x)
 	return string(b)
 }
 
 // WithMeta sets the key, value metadata for given error.
-func (m *Error) WithMeta(key, value string) *Error {
-	if m.Meta == nil {
-		m.Meta = make(map[string]string)
+func (x *Error) WithMeta(key, value string) *Error {
+	if x.Meta == nil {
+		x.Meta = make(map[string]string)
 	}
-	m.Meta[key] = value
-	return m
+	x.Meta[key] = value
+	return x
 }
 
 // WithProcess sets the process for given error.
-func (m *Error) WithProcess(process string) *Error {
-	m.Process = process
-	return m
+func (x *Error) WithProcess(process string) *Error {
+	x.Process = process
+	return x
 }
 
 // WithCode sets the code for given error.
-func (m *Error) WithCode(code codes.Code) *Error {
-	m.Code = uint32(code)
-	return m
+func (x *Error) WithCode(code codes.Code) *Error {
+	x.Code = uint32(code)
+	return x
 }
 
 // Is compares the errors with their values.
@@ -47,8 +47,8 @@ func Is(err, target error) bool {
 }
 
 // Is implements errors interface used by the
-func (m *Error) Is(err error) bool {
-	return Equal(m, err)
+func (x *Error) Is(err error) bool {
+	return Equal(x, err)
 }
 
 // IsNotFound checks if given input error is of code NotFound.
@@ -78,13 +78,40 @@ func IsInvalidArgument(err error) bool {
 	return e.Code == uint32(codes.InvalidArgument)
 }
 
-// IsDeadlineExceeded checks if given error means that given entity already exists.
+// IsDeadlineExceeded checks if given error is of type Deadline Exceeded.
 func IsDeadlineExceeded(err error) bool {
 	e, ok := err.(*Error)
 	if !ok {
 		return false
 	}
 	return e.Code == uint32(codes.DeadlineExceeded)
+}
+
+// IsUnauthenticated checks if given error is an unauthenticated error.
+func IsUnauthenticated(err error) bool {
+	e, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return e.Code == uint32(codes.Unauthenticated)
+}
+
+// IsInternal checks if the input is an internal error.
+func IsInternal(err error) bool {
+	e, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return e.Code == uint32(codes.Internal)
+}
+
+// IsPermissionDenied checks if given error is of type PermissionDenied.
+func IsPermissionDenied(err error) bool {
+	e, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return e.Code == uint32(codes.PermissionDenied)
 }
 
 // New generates a custom error.
@@ -224,12 +251,12 @@ func FromError(err error) *Error {
 	return Parse(err.Error())
 }
 
-func (e *Error) setDefaultID() {
+func (x *Error) setDefaultID() {
 	var id string
 	temp := make([]byte, 16)
 	_, err := rand.Read(temp)
 	if err == nil {
 		id = hex.EncodeToString(temp)
 	}
-	e.Id = id
+	x.Id = id
 }

@@ -1,0 +1,1 @@
+module "github.com/kucjac/cleango/messages/natsps"

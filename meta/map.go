@@ -20,12 +20,10 @@ const (
 	KeyContentLanguage = "contentLanguage"
 	KeyAcceptLanguages = "acceptLanguage"
 	KeyCurrency        = "currency"
-	KeyClientID        = "clientId"
 	KeyUserID          = "userId"
 	KeyToken           = "token"
 	KeyContentEncoding = "contentEncoding"
 	KeyRemoteIP        = "remoteIp"
-	KeyMessageType     = ""
 )
 
 // Get gets the key from the given metadata.
@@ -154,17 +152,6 @@ func (m Meta) UserID() (string, bool) {
 	return u, ok
 }
 
-// ClientID gets the client stored in the metadata.
-func (m Meta) ClientID() (string, bool) {
-	v, ok := m[KeyClientID]
-	return v, ok
-}
-
-// SetClientID sets the up the client metadata.
-func (m Meta) SetClientID(client string) {
-	m[KeyClientID] = client
-}
-
 // SetRemoteIP sets the remoteIP in the metadata.
 func (m Meta) SetRemoteIP(remoteIP string) {
 	m[KeyRemoteIP] = remoteIP
@@ -258,18 +245,6 @@ func AcceptLanguages(ctx context.Context) ([]language.Tag, bool) {
 		return nil, false
 	}
 	return md.AcceptLanguages()
-}
-
-
-
-
-// ClientID gets metadata client.
-func ClientID(ctx context.Context) (string, bool) {
-	md, ok := FromContext(ctx)
-	if !ok {
-		return "", false
-	}
-	return md.ClientID()
 }
 
 // UserID gets metadata userID.
