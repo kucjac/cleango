@@ -4,13 +4,8 @@ import (
 	"github.com/kucjac/cleango/messages/codec"
 )
 
-// AggregateBaseSetter is an interface that allows to set the aggregate base in the given aggregate.
-type AggregateBaseSetter interface {
-	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
-}
-
-// NewAggregateBaseSetter creates new aggregate setter.
-func NewAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator) AggregateBaseSetter {
+// newAggregateBaseSetter creates new aggregate setter.
+func newAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator) *aggBaseSetter {
 	return &aggBaseSetter{
 		eventCodec: eventCodec,
 		snapCodec:  snapCodec,

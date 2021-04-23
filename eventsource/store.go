@@ -10,14 +10,9 @@ import (
 
 //go:generate mockgen -destination=internal/storemock/store_gen.go -package=storemock . Store
 
-// EventStore is an interface used as an event store. It allows to operate on the event source storage.
+// EventStore is an interface used by the event store to load, commit and create snapshot on aggregates.
 type EventStore interface {
-	AggregateBaseSetter
-	Store
-}
-
-// Store is an interface used by the event store to load, commit and create snapshot on aggregates.
-type Store interface {
+	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
 	LoadEventStream(ctx context.Context, aggregate Aggregate) error
 	LoadEventStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
 	Commit(ctx context.Context, aggregate Aggregate) error
@@ -27,19 +22,19 @@ type Store interface {
 // New creates new EventStore implementation.
 func New(eventCodec codec.Codec, snapCodec codec.Codec, storage Storage) EventStore {
 	return &eventStore{
-		AggregateBaseSetter: NewAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
-		snapCodec:           snapCodec,
-		storage:             storage,
+		aggBaseSetter: newAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
+		snapCodec:     snapCodec,
+		storage:       storage,
 	}
 }
 
 type eventStore struct {
-	AggregateBaseSetter
+	*aggBaseSetter
 	snapCodec codec.Codec
 	storage   Storage
 }
 
-// GetStream gets the event stream and applies on provided aggregate.
+// LoadEventStream gets the event stream and applies on provided aggregate.
 func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
 	b := agg.AggBase()
 	// Get the full event stream for given aggregate.
@@ -62,7 +57,7 @@ func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
 	return nil
 }
 
-// GetStreamWithSnapshot gets the aggregate stream with the latest possible snapshot.
+// LoadEventStreamWithSnapshot gets the aggregate stream with the latest possible snapshot.
 func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
 	// At first try to get the snapshot for given aggregate.
 	b := agg.AggBase()
