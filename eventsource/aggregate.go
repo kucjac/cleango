@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/messages/codec"
+	"github.com/kucjac/cleango/xlog"
 )
 
 // Aggregate is an interface used for the aggregate models
@@ -89,6 +90,14 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 // CommittedEvents gets the committed event messages.
 func (a *AggregateBase) CommittedEvents() []*Event {
 	return a.committedEvents
+}
+
+// MustLatestCommittedEvent gets the latest committed event message or panics.
+func (a *AggregateBase) MustLatestCommittedEvent() *Event {
+	if len(a.committedEvents) == 0 {
+		xlog.Panicf("no committed events found for the aggregate: %s - id: %s", a.aggType, a.id)
+	}
+	return a.committedEvents[len(a.committedEvents)-1]
 }
 
 // LatestCommittedEvent gets the latest committed event message.
