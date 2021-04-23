@@ -23,19 +23,23 @@ type MockStoreMockRecorder struct {
 
 // NewMockStore creates a new mock instance.
 func NewMockStore(ctrl *gomock.Controller, eventCodec, snapCodec codec.Codec, idGen IdGenerator) *MockStore {
-	return &MockStore{
+	mock := &MockStore{
 		ctrl:          ctrl,
 		aggBaseSetter: newAggregateBaseSetter(eventCodec, snapCodec, idGen),
 	}
+	mock.recorder = &MockStoreMockRecorder{mock}
+	return mock
 }
 
 // NewDefaultMockStore creates new default mock store.
 func NewDefaultMockStore(ctrl *gomock.Controller) *MockStore {
 	c := codec.JSON()
-	return &MockStore{
+	mock := &MockStore{
 		ctrl:          ctrl,
 		aggBaseSetter: newAggregateBaseSetter(c, c, UUIDGenerator{}),
 	}
+	mock.recorder = &MockStoreMockRecorder{mock: mock}
+	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
