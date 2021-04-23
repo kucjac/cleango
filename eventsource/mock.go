@@ -53,7 +53,7 @@ func (m *MockStore) Commit(arg0 context.Context, arg1 Aggregate) error {
 	ret := m.ctrl.Call(m, "Commit", arg0, arg1)
 	ret0, _ := ret[0].(error)
 
-	if ret0 != nil && m.setEventsCommitted {
+	if ret0 == nil && m.setEventsCommitted {
 		b := arg1.AggBase()
 		b.committedEvents, b.uncommittedEvents = b.uncommittedEvents, nil
 	}
