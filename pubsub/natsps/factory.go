@@ -8,8 +8,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/kucjac/cleango/errors"
-	"github.com/kucjac/cleango/messages/codec"
-	"github.com/kucjac/cleango/messages/pubsub"
+	"github.com/kucjac/cleango/pubsub"
+	"github.com/kucjac/cleango/pubsub/codec"
 	"github.com/kucjac/cleango/xlog"
 )
 
