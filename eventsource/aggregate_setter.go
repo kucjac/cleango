@@ -1,7 +1,7 @@
 package eventsource
 
 import (
-	"github.com/kucjac/cleango/messages/codec"
+	"github.com/kucjac/cleango/pubsub/codec"
 )
 
 // newAggregateBaseSetter creates new aggregate setter.

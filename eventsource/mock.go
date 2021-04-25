@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kucjac/cleango/messages/codec"
+	"github.com/kucjac/cleango/pubsub/codec"
 )
 
 // MockStore is a mock of Store interface.

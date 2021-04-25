@@ -25,7 +25,8 @@ func (logger *Log) NewEntry() *logrus.Entry {
 // New will create new instance if logrus
 func New() *Log {
 	l := logrus.New()
-	// l.SetFormatter(NewTextFormatter(false))
-	l.SetLevel(logrus.DebugLevel)
+
+	l.SetFormatter(NewTextFormatter(false))
+	l.SetLevel(logrus.TraceLevel)
 	return &Log{Logger: l}
 }

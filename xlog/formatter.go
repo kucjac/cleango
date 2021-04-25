@@ -12,8 +12,8 @@ import (
 )
 
 // TextFormatter is struct implementing Format interface
-// this is useful for fomating logs indifferent environments.
-// This formater will format logs for terminal and testing.
+// this is useful for formatting logs in different environments.
+// This formatter will format logs for terminal and testing.
 type TextFormatter struct {
 	// Force disabling colors. For a TTY colors are enabled by default.
 	UseColors bool
@@ -21,18 +21,18 @@ type TextFormatter struct {
 	scheme *compiledColorScheme
 }
 
-// NewTextFormatter will create new formtter for logrus
+// NewTextFormatter creates new logrus based text formatter.
 func NewTextFormatter(colors bool) *TextFormatter {
-	f := &TextFormatter{}
-	f.scheme = noColorsColorScheme
+	f := &TextFormatter{
+		scheme: noColorsColorScheme,
+	}
 	if colors {
 		f.scheme = defaultCompiledColorScheme
 	}
 	return f
 }
 
-// Format to make interface `logrus.Formatter` happy. It will take entry
-// and covert it into byte stream.
+// Format implements `logrus.Formatter`.
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	x, err := ExtractHTTPField(entry.Data)
 	if err != nil && !errors.Is(err, NoHTTPOpt) {

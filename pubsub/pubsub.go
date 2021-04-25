@@ -6,8 +6,8 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 
-	"github.com/kucjac/cleango/messages/codec"
 	"github.com/kucjac/cleango/meta"
+	"github.com/kucjac/cleango/pubsub/codec"
 )
 
 // Factory is the interface used for both the publisher and subscriber factory.

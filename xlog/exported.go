@@ -7,12 +7,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	// std is the name of the standard xlog in stdlib `log`
-	std = New()
-)
-
-
+// std is the name of the standard log in stdlib.
+var std = New()
 
 // StdLogger returns standart xlog
 func StdLogger() *Log {

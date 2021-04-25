@@ -4,23 +4,23 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	pubsub2 "github.com/kucjac/cleango/pubsub"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/kucjac/cleango/errors"
-	"github.com/kucjac/cleango/messages/codec"
-	"github.com/kucjac/cleango/messages/pubsub"
+	"github.com/kucjac/cleango/pubsub/codec"
 	"github.com/kucjac/cleango/xlog"
 )
 
 var (
-	_ pubsub.Factory           = (*factory)(nil)
-	_ pubsub.PublisherFactory  = (*factory)(nil)
-	_ pubsub.SubscriberFactory = (*factory)(nil)
+	_ pubsub2.Factory           = (*factory)(nil)
+	_ pubsub2.PublisherFactory  = (*factory)(nil)
+	_ pubsub2.SubscriberFactory = (*factory)(nil)
 )
 
 // New creates a new factory.
-func New(cfg gochannel.Config, logger xlog.Logger) pubsub.Factory {
-	logAdapter := pubsub.NewLoggerAdapter(logger)
+func New(cfg gochannel.Config, logger xlog.Logger) pubsub2.Factory {
+	logAdapter := pubsub2.NewLoggerAdapter(logger)
 	return &factory{
 		gc:         gochannel.NewGoChannel(cfg, logAdapter),
 		logAdapter: logAdapter,
@@ -33,23 +33,23 @@ type factory struct {
 }
 
 // PublisherFactory implements pubsub.Factory interface.
-func (f *factory) PublisherFactory() pubsub.PublisherFactory {
+func (f *factory) PublisherFactory() pubsub2.PublisherFactory {
 	return f
 }
 
 // SubscriberFactory implements pubsub.Factory interface.
-func (f *factory) SubscriberFactory() pubsub.SubscriberFactory {
+func (f *factory) SubscriberFactory() pubsub2.SubscriberFactory {
 	return f
 }
 
 // NewSubscriber implements pubsub.SubscriberFactory interface.
-func (f *factory) NewSubscriber(_ ...pubsub.SubscriptionOption) (pubsub.Subscriber, error) {
+func (f *factory) NewSubscriber(_ ...pubsub2.SubscriptionOption) (pubsub2.Subscriber, error) {
 	return f.gc, nil
 }
 
 // NewPublisher creates new channel based publisher.
 // Implements pubsub.PublisherFactory.
-func (f *factory) NewPublisher(c codec.Codec) (pubsub.Publisher, error) {
+func (f *factory) NewPublisher(c codec.Codec) (pubsub2.Publisher, error) {
 	if c == nil {
 		return nil, errors.ErrInternal("no codec provided for chan publisher")
 	}
@@ -68,7 +68,7 @@ func (p *publisher) Publish(topic string, messages ...*message.Message) error {
 
 // PublishMessage encodes provided input message and publishes on provided topic.
 // Implements messages.Publisher interface.
-func (p *publisher) PublishMessage(topic string, msg interface{}, options ...pubsub.PublishOption) error {
+func (p *publisher) PublishMessage(topic string, msg interface{}, options ...pubsub2.PublishOption) error {
 	payload, err := p.c.Marshal(msg)
 	if err != nil {
 		return err

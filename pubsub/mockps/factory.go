@@ -2,9 +2,9 @@ package mockps
 
 import (
 	"github.com/golang/mock/gomock"
+	pubsub2 "github.com/kucjac/cleango/pubsub"
 
-	"github.com/kucjac/cleango/messages/codec"
-	"github.com/kucjac/cleango/messages/pubsub"
+	"github.com/kucjac/cleango/pubsub/codec"
 )
 
 // NewMockPublisherFactory creates new mock publisher factory.
@@ -18,7 +18,7 @@ type MockPublisherFactory struct {
 }
 
 // NewPublisher creates new mocked publisher.
-func (m MockPublisherFactory) NewPublisher(codec.Codec) (pubsub.Publisher, error) {
+func (m MockPublisherFactory) NewPublisher(codec.Codec) (pubsub2.Publisher, error) {
 	return NewMockPublisher(m.m), nil
 }
 
@@ -33,6 +33,6 @@ type MockSubscriberFactory struct {
 }
 
 // NewSubscriber creates new mmocked subscriber.
-func (m *MockSubscriberFactory) NewSubscriber(_ ...pubsub.SubscriptionOption) (pubsub.Subscriber, error) {
+func (m *MockSubscriberFactory) NewSubscriber(_ ...pubsub2.SubscriptionOption) (pubsub2.Subscriber, error) {
 	return NewMockSubscriber(m.m), nil
 }

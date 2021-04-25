@@ -3,7 +3,7 @@ package eventsource
 import (
 	"time"
 
-	"github.com/kucjac/cleango/messages/codec"
+	"github.com/kucjac/cleango/pubsub/codec"
 	"github.com/kucjac/cleango/xlog"
 )
 

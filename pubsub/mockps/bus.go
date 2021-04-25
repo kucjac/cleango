@@ -5,12 +5,12 @@
 package mockps
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	message "github.com/ThreeDotsLabs/watermill/message"
-	gomock "github.com/golang/mock/gomock"
-	pubsub "github.com/kucjac/cleango/messages/pubsub"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/golang/mock/gomock"
+	pubsub2 "github.com/kucjac/cleango/pubsub"
 )
 
 // MockPublisher is a mock of Publisher interface.
@@ -70,7 +70,7 @@ func (mr *MockPublisherMockRecorder) Publish(arg0 interface{}, arg1 ...interface
 }
 
 // PublishMessage mocks base method.
-func (m *MockPublisher) PublishMessage(arg0 string, arg1 interface{}, arg2 ...pubsub.PublishOption) error {
+func (m *MockPublisher) PublishMessage(arg0 string, arg1 interface{}, arg2 ...pubsub2.PublishOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

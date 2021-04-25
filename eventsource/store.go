@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/errors"
-	"github.com/kucjac/cleango/messages/codec"
+	"github.com/kucjac/cleango/pubsub/codec"
 )
 
 //go:generate mockgen -destination=internal/storemock/store_gen.go -package=storemock . Store

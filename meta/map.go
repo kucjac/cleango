@@ -24,6 +24,7 @@ const (
 	KeyToken           = "token"
 	KeyContentEncoding = "contentEncoding"
 	KeyRemoteIP        = "remoteIp"
+	KeyRequestID       = "requestId"
 )
 
 // Get gets the key from the given metadata.
@@ -163,6 +164,17 @@ func (m Meta) RemoteIP() (string, bool) {
 	return v, ok
 }
 
+// RequestID gets the request id from the metadata.
+func (m Meta) RequestID() (string, bool) {
+	v, ok := m[KeyRequestID]
+	return v, ok
+}
+
+// SetRequestID sets the request id in the metadata.
+func (m Meta) SetRequestID(requestID string) {
+	m[KeyRequestID] = requestID
+}
+
 // SetToken sets the token in the metadata context.
 func (m Meta) SetToken(token string) {
 	m[KeyToken] = token
@@ -272,4 +284,12 @@ func RemoteIP(ctx context.Context) (string, bool) {
 		return "", false
 	}
 	return md.RemoteIP()
+}
+
+func RequestID(ctx context.Context) (string, bool) {
+	md, ok := FromContext(ctx)
+	if !ok {
+		return "", false
+	}
+	return md.RequestID()
 }
