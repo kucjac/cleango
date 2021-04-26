@@ -94,8 +94,8 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/kucjac/cleango v0.0.0-20210412151350-bb5947b9a7c9 h1:CEf1Ac8v1A99wkt/Z2W+jTeuEOAkSe2AnsZypy3l7i0=
-github.com/kucjac/cleango v0.0.0-20210412151350-bb5947b9a7c9/go.mod h1:iOXenxnxEIYgvLEsa+e1lhNiebZsvtbwcpEFb52jsRw=
+github.com/kucjac/cleango v0.0.0-20210426100526-6ae6c48cc411 h1:Bqs7cKDQTmVYd+KsHdOBlrkHGlsZTFEuYUImHMsdhR8=
+github.com/kucjac/cleango v0.0.0-20210426100526-6ae6c48cc411/go.mod h1:iOXenxnxEIYgvLEsa+e1lhNiebZsvtbwcpEFb52jsRw=
 github.com/lib/pq v1.1.1/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/lithammer/shortuuid/v3 v3.0.4 h1:uj4xhotfY92Y1Oa6n6HUiFn87CdoEHYUlTy0+IgbLrs=
 github.com/lithammer/shortuuid/v3 v3.0.4/go.mod h1:RviRjexKqIzx/7r1peoAITm6m7gnif/h+0zmolKJjzw=
