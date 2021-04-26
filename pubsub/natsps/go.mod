@@ -1,4 +1,4 @@
-module github.com/kucjac/cleango/messages/natsps
+module github.com/kucjac/cleango/pubsub/natsps
 
 go 1.16
 
