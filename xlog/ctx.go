@@ -50,7 +50,7 @@ func (m RequestIDHook) Fire(entry *logrus.Entry) error {
 	if !ok {
 		return nil
 	}
-	entry.WithField("request-id", rID)
+	entry.Data["request-id"] = rID
 	return nil
 }
 
@@ -68,6 +68,6 @@ func (u UserIDHook) Fire(entry *logrus.Entry) error {
 	if !ok {
 		return nil
 	}
-	entry.WithField("user-id", uID)
+	entry.Data["user-id"] = uID
 	return nil
 }
