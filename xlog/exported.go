@@ -1,6 +1,7 @@
 package xlog
 
 import (
+	"context"
 	"io"
 	"time"
 
@@ -49,6 +50,11 @@ func IsLevelEnabled(level logrus.Level) bool {
 // AddHook adds a hook to the standard xlog hooks.
 func AddHook(hook logrus.Hook) {
 	std.AddHook(hook)
+}
+
+// WithContext returns a new log entry with given context.
+func WithContext(ctx context.Context) *logrus.Entry {
+	return std.WithContext(ctx)
 }
 
 // WithErr creates an entry from the standard xlog and adds an error to it, using the value defined in ErrorKey as key.

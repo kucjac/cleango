@@ -13,7 +13,7 @@ type CtxKey string
 // CtxLogger represents key in context
 const CtxLogger CtxKey = "xlog:entry"
 
-// Ctx will extract xlog from context
+// Ctx will extract log Entry from context
 func Ctx(ctx context.Context) *logrus.Entry {
 	if ctx == nil {
 		return logrus.NewEntry(std.Logger)
