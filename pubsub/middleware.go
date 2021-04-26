@@ -2,13 +2,46 @@ package pubsub
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"os"
 	"runtime/debug"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/kucjac/cleango/xlog"
 	"github.com/sirupsen/logrus"
 )
+
+// Key to use when setting the request ID.
+type ctxKeyRequestID int
+
+// RequestIDKey is the key that holds the unique request ID in a request context.
+const RequestIDKey ctxKeyRequestID = 0
+
+var (
+	prefix string
+	reqId  uint64
+)
+
+func init() {
+	hostname, err := os.Hostname()
+	if hostname == "" || err != nil {
+		hostname = "localhost"
+	}
+	var buf [12]byte
+	var b64 string
+	for len(b64) < 10 {
+		rand.Read(buf[:])
+		b64 = base64.StdEncoding.EncodeToString(buf[:])
+		b64 = strings.NewReplacer("+", "", "/", "").Replace(b64)
+	}
+
+	prefix = fmt.Sprintf("%s/%s", hostname, b64[0:10])
+}
 
 // CtxTopic gets the subscription topic from the given context.
 func CtxTopic(ctx context.Context) string {
@@ -91,4 +124,37 @@ func Logger(next Handler) Handler {
 		xlog.WithFields(fields).
 			Tracef("message handled in %s", time.Since(ts))
 	})
+}
+
+// RequestID is a middleware function that generates new request id and puts it into message context,
+// A request ID is a string of the form "host.example.com/random-0001",
+// where "random" is a base62 random string that uniquely identifies this go
+// process, and where the last number is an atomically incremented request
+// counter.
+// The concept and implementation of this request id is based on the brilliant golang library: github.com/go-chi/chi.
+func RequestID(next Handler) Handler {
+	return HandlerFunc(func(m *message.Message) {
+		ctx := m.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		thisID := atomic.AddUint64(&reqId, 1)
+		requestID := fmt.Sprintf("%s-%06d", prefix, thisID)
+		ctx = context.WithValue(ctx, RequestIDKey, requestID)
+		m.SetContext(ctx)
+
+		next.Handle(m)
+	})
+}
+
+// GetReqID returns a request ID from the given context if one is present.
+// Returns the empty string if a request ID cannot be found.
+func GetReqID(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if reqID, ok := ctx.Value(RequestIDKey).(string); ok {
+		return reqID
+	}
+	return ""
 }
