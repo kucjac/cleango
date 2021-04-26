@@ -42,8 +42,10 @@ func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
 	if err != nil {
 		return err
 	}
+
+	// If no events are found return an error.
 	if len(events) == 0 {
-		return nil
+		return errors.ErrNotFoundf("aggregate: %s with id: %s not found", b.aggType, b.id)
 	}
 
 	// Apply all events from the stream on the aggregate.
@@ -76,12 +78,20 @@ func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggreg
 		b.revision = snap.Revision
 		// Get the event stream starting form the revision provided in the snapshot.
 		events, err = e.storage.GetStreamFromRevision(ctx, b.id, b.aggType, b.revision)
+		if err != nil {
+			return err
+		}
 	} else {
 		// If the snapshot is not found gets the full event stream.
 		events, err = e.storage.GetEventStream(ctx, b.id, b.aggType)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+
+		// If there is no events and the snapshot was not found - then there is no aggregate matching given id.
+		if len(events) == 0 {
+			return errors.ErrNotFoundf("aggregate: %s with id %s not found", b.aggType, b.id)
+		}
 	}
 
 	// Iterate over each event and apply them on given aggregate.
