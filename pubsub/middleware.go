@@ -119,9 +119,14 @@ func Logger(next Handler) Handler {
 			"subscriptionId": CtxSubscriptionID(ctx),
 			"topic":          CtxTopic(ctx),
 		}
+		reqID := GetReqID(ctx)
+		if reqID != "" {
+			fields["requestId"] = reqID
+		}
 		ts := time.Now()
 		next.Handle(m)
-		xlog.WithFields(fields).
+		xlog.WithContext(ctx).
+			WithFields(fields).
 			Tracef("message handled in %s", time.Since(ts))
 	})
 }
