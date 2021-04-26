@@ -185,10 +185,10 @@ func (m *Mux) With(middlewares ...Middleware) *Mux {
 }
 
 // Subscribe registers topic subscriber that handles the message using provided handler with given options.
-func (m *Mux) Subscribe(topic string, handler Handler, options ...SubscriptionOption) {
+func (m *Mux) Subscribe(topic string, hf HandlerFunc, options ...SubscriptionOption) {
 	m.routes = append(m.routes, route{
 		topic:       topic,
-		h:           handler,
+		h:           hf,
 		middlewares: m.middlewares,
 		options:     options,
 	})
