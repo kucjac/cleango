@@ -1,11 +1,11 @@
 package eventsource
 
 import (
-	"github.com/kucjac/cleango/pubsub/codec"
+	codec2 "github.com/kucjac/cleango/codec"
 )
 
 // newAggregateBaseSetter creates new aggregate setter.
-func newAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator) *aggBaseSetter {
+func newAggregateBaseSetter(eventCodec, snapCodec codec2.Codec, idGen IdGenerator) *aggBaseSetter {
 	return &aggBaseSetter{
 		eventCodec: eventCodec,
 		snapCodec:  snapCodec,
@@ -14,7 +14,7 @@ func newAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator
 }
 
 type aggBaseSetter struct {
-	eventCodec, snapCodec codec.Codec
+	eventCodec, snapCodec codec2.Codec
 	idGen                 IdGenerator
 }
 

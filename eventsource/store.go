@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/kucjac/cleango/errors"
-	"github.com/kucjac/cleango/pubsub/codec"
+	"github.com/kucjac/cleango/cgerrors"
+	"github.com/kucjac/cleango/codec"
 )
 
-//go:generate mockgen -destination=internal/storemock/store_gen.go -package=storemock . Store
+//go:generate mockgen -destination=mock.go -package=eventsource . Store
 
 // EventStore is an interface used by the event store to load, commit and create snapshot on aggregates.
 type EventStore interface {
@@ -17,21 +17,28 @@ type EventStore interface {
 	LoadEventStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
 	Commit(ctx context.Context, aggregate Aggregate) error
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
+	StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error)
 }
 
 // New creates new EventStore implementation.
-func New(eventCodec codec.Codec, snapCodec codec.Codec, storage Storage) EventStore {
-	return &eventStore{
-		aggBaseSetter: newAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
-		snapCodec:     snapCodec,
-		storage:       storage,
+func New(cfg *Config, storage Storage) (EventStore, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
+
+	return &eventStore{
+		aggBaseSetter: newAggregateBaseSetter(cfg.EventCodec, cfg.SnapshotCodec, UUIDGenerator{}),
+		snapCodec:     cfg.SnapshotCodec,
+		storage:       storage,
+		bufferSize:    cfg.BufferSize,
+	}, nil
 }
 
 type eventStore struct {
 	*aggBaseSetter
-	snapCodec codec.Codec
-	storage   Storage
+	snapCodec  codec.Codec
+	storage    Storage
+	bufferSize int
 }
 
 // LoadEventStream gets the event stream and applies on provided aggregate.
@@ -45,7 +52,7 @@ func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
 
 	// If no events are found return an error.
 	if len(events) == 0 {
-		return errors.ErrNotFoundf("aggregate: %s with id: %s not found", b.aggType, b.id)
+		return cgerrors.ErrNotFoundf("aggregate: %s with id: %s not found", b.aggType, b.id)
 	}
 
 	// Apply all events from the stream on the aggregate.
@@ -64,7 +71,7 @@ func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggreg
 	// At first try to get the snapshot for given aggregate.
 	b := agg.AggBase()
 	snap, err := e.storage.GetSnapshot(ctx, b.id, b.aggType, b.version)
-	isNotFound := errors.IsNotFound(err)
+	isNotFound := cgerrors.IsNotFound(err)
 	if err != nil && !isNotFound {
 		return err
 	}
@@ -90,7 +97,7 @@ func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggreg
 
 		// If there is no events and the snapshot was not found - then there is no aggregate matching given id.
 		if len(events) == 0 {
-			return errors.ErrNotFoundf("aggregate: %s with id %s not found", b.aggType, b.id)
+			return cgerrors.ErrNotFoundf("aggregate: %s with id %s not found", b.aggType, b.id)
 		}
 	}
 
@@ -136,7 +143,7 @@ func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
 		if err == nil {
 			return nil
 		}
-		if !errors.IsAlreadyExists(err) {
+		if !cgerrors.IsAlreadyExists(err) {
 			return err
 		}
 
@@ -160,4 +167,17 @@ func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
 			}
 		}
 	}
+}
+
+// StreamAggregates opens up the aggregate streaming channel. The channel would got closed when there is no more aggregate to read
+// or when the context is done.
+// Closing resulting channel would result with a panic.
+func (e *eventStore) StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error) {
+	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	l := newLoader(c, aggType, aggVersion, factory, e.bufferSize)
+	return l.readChannel()
 }

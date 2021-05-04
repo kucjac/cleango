@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/golang/mock/gomock"
-	"github.com/kucjac/cleango/pubsub/codec"
+	"github.com/kucjac/cleango/codec"
 )
 
 // MockStore is a mock of Store interface.
@@ -108,4 +108,19 @@ func (m *MockStore) SaveSnapshot(arg0 context.Context, arg1 Aggregate) error {
 func (mr *MockStoreMockRecorder) SaveSnapshot(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveSnapshot", reflect.TypeOf((*MockStore)(nil).SaveSnapshot), arg0, arg1)
+}
+
+// StreamAggregates mocks base method.
+func (m *MockStore) StreamAggregates(arg0 context.Context, arg1 string, arg2 int64, arg3 AggregateFactory) (<-chan Aggregate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamAggregates", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(<-chan Aggregate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamAggregates indicates an expected call of StreamAggregates.
+func (mr *MockStoreMockRecorder) StreamAggregates(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamAggregates", reflect.TypeOf((*MockStore)(nil).StreamAggregates), arg0, arg1, arg2, arg3)
 }

@@ -3,9 +3,13 @@ package eventsource
 import (
 	"time"
 
-	"github.com/kucjac/cleango/pubsub/codec"
+	codec2 "github.com/kucjac/cleango/codec"
 	"github.com/kucjac/cleango/xlog"
 )
+
+type AggregateFactory interface {
+	New(aggType string, aggVersion int64) Aggregate
+}
 
 // Aggregate is an interface used for the aggregate models
 type Aggregate interface {
@@ -20,8 +24,8 @@ type AggregateBase struct {
 	id                string
 	aggType           string
 	agg               Aggregate
-	eventCodec        codec.Codec
-	snapCodec         codec.Codec
+	eventCodec        codec2.Codec
+	snapCodec         codec2.Codec
 	idGen             IdGenerator
 	timestamp         int64
 	uncommittedEvents []*Event

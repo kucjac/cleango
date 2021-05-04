@@ -1,47 +1,26 @@
-package pubsub
+package xpubsub
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"fmt"
-	"os"
 	"runtime/debug"
-	"strings"
-	"sync/atomic"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/kucjac/cleango/xlog"
 	"github.com/sirupsen/logrus"
+	"gocloud.dev/pubsub"
+
+	"github.com/kucjac/cleango/cgerrors"
+	"github.com/kucjac/cleango/xlog"
+
+	"github.com/kucjac/cleango/internal/uniqueid"
 )
 
-// Key to use when setting the request ID.
-type ctxKeyRequestID int
+// Key to use when setting the message ID.
+type ctxKeyMessageID int
 
-// RequestIDKey is the key that holds the unique request ID in a request context.
-const RequestIDKey ctxKeyRequestID = 0
+var gen = uniqueid.NextGenerator("subscription")
 
-var (
-	prefix string
-	reqId  uint64
-)
-
-func init() {
-	hostname, err := os.Hostname()
-	if hostname == "" || err != nil {
-		hostname = "localhost"
-	}
-	var buf [12]byte
-	var b64 string
-	for len(b64) < 10 {
-		rand.Read(buf[:])
-		b64 = base64.StdEncoding.EncodeToString(buf[:])
-		b64 = strings.NewReplacer("+", "", "/", "").Replace(b64)
-	}
-
-	prefix = fmt.Sprintf("%s/%s", hostname, b64[0:10])
-}
+// MessageIDKey is the key that holds the unique request ID in a request context.
+const MessageIDKey ctxKeyMessageID = 0
 
 // CtxTopic gets the subscription topic from the given context.
 func CtxTopic(ctx context.Context) string {
@@ -76,8 +55,9 @@ type ChainHandler struct {
 	chain       Handler
 }
 
-func (c *ChainHandler) Handle(m *message.Message) {
-	c.chain.Handle(m)
+// Handle implements Handler interface.
+func (c *ChainHandler) Handle(ctx context.Context, m *pubsub.Message) error {
+	return c.chain.Handle(ctx, m)
 }
 
 // chain builds a http.Handler composed of an inline middleware stack and endpoint
@@ -97,68 +77,103 @@ func chain(middlewares Middlewares, endpoint Handler) Handler {
 	return h
 }
 
+// Acker is a middleware that checks if the subsequent handlers returns an error and on success Ackes them.
+// In case of failure it Nacks the message if it is possible.
+func Acker(h Handler) Handler {
+	return HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
+		if err := h.Handle(ctx, m); err != nil {
+			if m.Nackable() {
+				m.Nack()
+			} else {
+				// If the implementation doesn't allow us to Nack the message it must be Acknowledged.
+				m.Ack()
+			}
+			return err
+		}
+		m.Ack()
+		return nil
+	})
+}
+
 // Recoverer recovers from any panic in the handler and appends RecoveredPanicError with the stacktrace
 // to any error returned from the handler.
 func Recoverer(h Handler) Handler {
-	return HandlerFunc(func(m *message.Message) {
+	return HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
 		defer func() {
 			if r := recover(); r != nil {
 				xlog.Errorf("panic occurred: %#v, stack: \n%s", r, string(debug.Stack()))
 			}
 		}()
-		h.Handle(m)
+		if err := h.Handle(ctx, m); err != nil {
+			return err
+		}
+		return nil
 	})
 }
 
 // Logger is a middleware function that is used for trace logging incoming message on subscriptions.
 func Logger(next Handler) Handler {
-	return HandlerFunc(func(m *message.Message) {
-		ctx := m.Context()
+	return HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
 		fields := logrus.Fields{
-			"messageId":      m.UUID,
 			"subscriptionId": CtxSubscriptionID(ctx),
 			"topic":          CtxTopic(ctx),
 		}
-		reqID := GetReqID(ctx)
+		reqID := GetMessageID(ctx)
 		if reqID != "" {
-			fields["requestId"] = reqID
+			fields["messageId"] = reqID
 		}
 		ts := time.Now()
-		next.Handle(m)
+
+		var (
+			msg  string
+			code cgerrors.ErrorCode
+		)
+		err := next.Handle(ctx, m)
+		if err != nil {
+			if e, ok := err.(*cgerrors.Error); ok {
+				code = e.Code
+				msg = e.Detail
+			} else {
+				code = cgerrors.Code(err)
+				msg = err.Error()
+			}
+		}
+		fields["code"] = code
+		if msg != "" {
+			fields["detail"] = msg
+		}
 		xlog.WithContext(ctx).
 			WithFields(fields).
 			Tracef("message handled in %s", time.Since(ts))
+		return err
 	})
 }
 
-// RequestID is a middleware function that generates new request id and puts it into message context,
-// A request ID is a string of the form "host.example.com/random-0001",
+// MessageID is a middleware function that generates new request id and puts it into message context,
+// A message ID is a string of the form "host.example.com/random-0001",
 // where "random" is a base62 random string that uniquely identifies this go
 // process, and where the last number is an atomically incremented request
 // counter.
 // The concept and implementation of this request id is based on the brilliant golang library: github.com/go-chi/chi.
-func RequestID(next Handler) Handler {
-	return HandlerFunc(func(m *message.Message) {
-		ctx := m.Context()
+func MessageID(next Handler) Handler {
+	return HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		thisID := atomic.AddUint64(&reqId, 1)
-		requestID := fmt.Sprintf("%s-%06d", prefix, thisID)
-		ctx = context.WithValue(ctx, RequestIDKey, requestID)
-		m.SetContext(ctx)
+		messageId := gen.NextId()
+		ctx = context.WithValue(ctx, MessageIDKey, messageId)
 
-		next.Handle(m)
+		return next.Handle(ctx, m)
 	})
 }
 
-// GetReqID returns a request ID from the given context if one is present.
-// Returns the empty string if a request ID cannot be found.
-func GetReqID(ctx context.Context) string {
+// GetMessageID returns a message ID from the given context if one is present.
+// Returns the empty string if a message ID cannot be found.
+func GetMessageID(ctx context.Context) string {
 	if ctx == nil {
 		return ""
 	}
-	if reqID, ok := ctx.Value(RequestIDKey).(string); ok {
+	if reqID, ok := ctx.Value(MessageIDKey).(string); ok {
 		return reqID
 	}
 	return ""

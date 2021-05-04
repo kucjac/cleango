@@ -1,4 +1,5 @@
 CREATE TABLE {{.EventTable}} (
+    id bigint NOT NULL auto_increment PRIMARY KEY,
     event_id varchar(255) NOT NULL,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
@@ -9,10 +10,8 @@ CREATE TABLE {{.EventTable}} (
     CONSTRAINT aggregate_revision UNIQUE (aggregate_id, revision)
 );
 
-ALTER TABLE {{.EventTable}} ADD PRIMARY KEY (event_id);
-
 CREATE TABLE {{.SnapshotTable}} (
-    id bigint NOT NULL,
+    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
     aggregate_version integer NOT NULL,
@@ -21,5 +20,11 @@ CREATE TABLE {{.SnapshotTable}} (
     snapshot_data blob
 );
 
-ALTER TABLE {{.SnapshotTable}} ADD PRIMARY KEY (id);
-ALTER TABLE {{.SnapshotTable}} MODIFY COLUMN id bigint NOT NULL AUTO_INCREMENT;
+CREATE TABLE {{.AggregateTable}} (
+    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    aggregate_id VARCHAR(255) NOT NULL,
+    aggregate_type VARCHAR(255) NOT NULL
+    inserted_at bigint NOT NULL,
+    constraint aggregate_aggregate_id_aggregate_type_uindex
+        unique(aggregate_id, aggregate_type)
+);

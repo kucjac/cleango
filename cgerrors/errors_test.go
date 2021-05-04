@@ -1,22 +1,20 @@
-package errors
+package cgerrors
 
 import (
 	er "errors"
 	"testing"
-
-	"google.golang.org/grpc/codes"
 )
 
 func TestFromError(t *testing.T) {
 	var err error
 	err = ErrNotFoundf("%s", "example")
 	merr := FromError(err)
-	if merr.Code != uint32(codes.NotFound) {
+	if merr.Code != ErrorCode_NotFound {
 		t.Fatalf("invalid conversation %v != %v", err, merr)
 	}
 	err = er.New(err.Error())
 	merr = FromError(err)
-	if merr.Code != uint32(codes.NotFound) {
+	if merr.Code != ErrorCode_NotFound {
 		t.Fatalf("invalid conversation %v != %v", err, merr)
 	}
 
@@ -41,13 +39,13 @@ func TestErrors(t *testing.T) {
 	testData := []*Error{
 		{
 			Id:     "test",
-			Code:   uint32(codes.Internal),
+			Code:   ErrorCode_Internal,
 			Detail: "Internal error",
 		},
 	}
 
 	for _, e := range testData {
-		ne := New(e.Id, e.Detail, codes.Code(e.Code))
+		ne := New(e.Id, e.Detail, e.Code)
 
 		if e.Error() != ne.Error() {
 			t.Fatalf("Expected %s got %s", e.Error(), ne.Error())

@@ -1,7 +1,7 @@
 package codec
 
 import (
-	jsoniter "github.com/json-iterator/go"
+	"encoding/json"
 )
 
 // JSON gets std json codec implementation.
@@ -15,12 +15,12 @@ type jsonCodec struct{}
 
 // Marshal implements codec.Marshaler interface.
 func (j *jsonCodec) Marshal(input interface{}) ([]byte, error) {
-	return jsoniter.Marshal(input)
+	return json.Marshal(input)
 }
 
 // Unmarshal implements codec.Marshaler interface
 func (j *jsonCodec) Unmarshal(data []byte, output interface{}) error {
-	return jsoniter.Unmarshal(data, output)
+	return json.Unmarshal(data, output)
 }
 
 // Encoding returns codec encoding.

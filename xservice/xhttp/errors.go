@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 )
 
 // WriteErrJSON writes the JSON error into given response writer.
@@ -18,7 +18,7 @@ func WriteErrJSON(rw http.ResponseWriter, err error, options ...ResponseOption) 
 		option(o)
 	}
 
-	e, ok := err.(*errors.Error)
+	e, ok := err.(*cgerrors.Error)
 	if !ok {
 		writeUndefinedError(err, rw, o)
 		return
@@ -26,7 +26,7 @@ func WriteErrJSON(rw http.ResponseWriter, err error, options ...ResponseOption) 
 	writeDefinedError(rw, e, o)
 }
 
-func writeDefinedError(rw http.ResponseWriter, e *errors.Error, o *ResponseOptions) {
+func writeDefinedError(rw http.ResponseWriter, e *cgerrors.Error, o *ResponseOptions) {
 	data, err := json.Marshal(e)
 	if err != nil {
 		writeUndefinedError(e, rw, o)

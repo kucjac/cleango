@@ -6,7 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 )
 
 // HTTPRequest for logging HTTP requests. Only contains semantics
@@ -64,7 +64,7 @@ type HTTPRequest struct {
 const HTTPRequestKey = "http:request"
 
 // NoHTTPOpt means no request ke was found
-var NoHTTPOpt = errors.ErrInvalidArgument("logging - no http request found")
+var NoHTTPOpt = cgerrors.ErrInvalidArgument("logging - no http request found")
 
 // ExtractHTTPField will extract http option
 func ExtractHTTPField(r logrus.Fields) (HTTPRequest, error) {
@@ -74,7 +74,7 @@ func ExtractHTTPField(r logrus.Fields) (HTTPRequest, error) {
 	}
 	req, ok := reqData.(HTTPRequest)
 	if !ok {
-		return HTTPRequest{}, errors.ErrInternalf("logging invlid type of http request: %T", reqData)
+		return HTTPRequest{}, cgerrors.ErrInternalf("logging invlid type of http request: %T", reqData)
 	}
 	return req, nil
 }

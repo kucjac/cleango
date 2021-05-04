@@ -3,12 +3,13 @@ package sqlxes
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/kucjac/cleango/xservice"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/eventsource"
 )
 
@@ -16,18 +17,33 @@ var _ eventsource.Storage = (*sqlStorage)(nil)
 
 // Config is the configuration for the event storage.
 type Config struct {
-	EventTable    string
-	SnapshotTable string
-	SchemaName    string // Optional
+	EventTable     string
+	SnapshotTable  string
+	SchemaName     string // Optional
+	AggregateTable string
+	WorkersCount   int
+}
+
+// DefaultConfig creates a new default config.
+func DefaultConfig() *Config {
+	return &Config{
+		EventTable:     "event",
+		SnapshotTable:  "snapshot",
+		AggregateTable: "aggregate",
+		WorkersCount:   10,
+	}
 }
 
 // Validate checks if the config is valid to use.
 func (c *Config) Validate() error {
 	if c.EventTable == "" {
-		return errors.ErrInternal("no event table name provided")
+		return cgerrors.ErrInternal("no event table name provided")
 	}
 	if c.SnapshotTable == "" {
-		return errors.ErrInternal("no snapshot table name provided")
+		return cgerrors.ErrInternal("no snapshot table name provided")
+	}
+	if c.AggregateTable == "" {
+		return cgerrors.ErrInternalf("no aggregate table name provided")
 	}
 	return nil
 }
@@ -52,62 +68,40 @@ func (c *Config) snapshotTableName() string {
 	return sb.String()
 }
 
-// New creates a new event storage based on provided sqlx connection.
-func New(conn *sqlx.DB, cfg *Config, isErrDupFunc IsErrDuplicatedFunc) (eventsource.Storage, error) {
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-	if isErrDupFunc == nil {
-		return nil, errors.ErrInternal("is error duplicated function - not defined")
-	}
-	return &sqlStorage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), isErrDuplicated: isErrDupFunc}, nil
-}
-
-// IsErrDuplicatedFunc is a function that checks if given error is returing duplicated content error (unique constraint violation).
-type IsErrDuplicatedFunc func(err error) bool
-
-type sqlStorage struct {
-	conn            *sqlx.DB
-	cfg             *Config
-	query           queries
-	isErrDuplicated IsErrDuplicatedFunc
-}
-
-const (
-	insertEventQuery           = `INSERT INTO %s (aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data) VALUES (?,?,?,?,?,?,?)`
-	getEventStreamQuery        = `SELECT aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data FROM %s WHERE aggregate_id = ? AND aggregate_type = ?`
-	saveSnapshotQuery          = `INSERT INTO %s (aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data) VALUES (?,?,?,?,?,?)`
-	getSnapshotQuery           = `SELECT aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data FROM %s WHERE aggregate_id = ? AND aggregate_type = ? AND aggregate_version = ?`
-	getStreamFromRevisionQuery = `SELECT aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data FROM %s WHERE aggregate_id = ? AND aggregate_type = ? AND revision > ?`
-	batchInsertQueryBase       = `INSERT INTO %s (aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data) VALUES `
-)
-
-type queries struct {
-	getEventStream        string
-	saveSnapshot          string
-	getSnapshot           string
-	getStreamFromRevision string
-	insertEvent           string
-}
-
-func (q queries) batchInsertEvent(length int) string {
+func (c *Config) aggregateTableName() string {
 	sb := strings.Builder{}
-	sb.WriteString(batchInsertQueryBase)
-	for i := 0; i < length; i++ {
-		sb.WriteString("(?,?,?,?,?,?,?)")
-		sb.WriteRune(',')
+	if c.SchemaName != "" {
+		sb.WriteString(c.SchemaName)
+		sb.WriteRune('.')
 	}
+	sb.WriteString(c.AggregateTable)
 	return sb.String()
 }
 
-func newQueries(conn *sqlx.DB, c *Config) queries {
-	return queries{
-		getEventStream:        conn.Rebind(fmt.Sprintf(getEventStreamQuery, c.eventTableName())),
-		saveSnapshot:          conn.Rebind(fmt.Sprintf(saveSnapshotQuery, c.snapshotTableName())),
-		getSnapshot:           conn.Rebind(fmt.Sprintf(getSnapshotQuery, c.snapshotTableName())),
-		getStreamFromRevision: conn.Rebind(fmt.Sprintf(getStreamFromRevisionQuery, c.eventTableName())),
-		insertEvent:           conn.Rebind(fmt.Sprintf(insertEventQuery, c.eventTableName())),
+// New creates a new event storage based on provided sqlx connection.
+func New(conn *sqlx.DB, cfg *Config, d xservice.Driver) (eventsource.Storage, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
+	if d == nil {
+		return nil, cgerrors.ErrInternal("sqlxes driver not defined")
+	}
+	if cfg.WorkersCount == 0 {
+		cfg.WorkersCount = 10
+	}
+	return &sqlStorage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), d: d}, nil
+}
+
+type sqlStorage struct {
+	conn       *sqlx.DB
+	cfg        *Config
+	query      queries
+	d          xservice.Driver
+	maxRetries int
+}
+
+func (s *sqlStorage) NewCursor(ctx context.Context, aggType string, aggVersion int64) (eventsource.Cursor, error) {
+	return s.newCursor(ctx, aggType, aggVersion), nil
 }
 
 // SaveEvents stores provided events in the database.
@@ -132,15 +126,32 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 			e.EventType,
 			e.EventData,
 		}
-		_, err := s.conn.ExecContext(ctx, query, values...)
+
+		// If this is initial aggregate revision insert new entry in the aggregate table.
+		if e.Revision == 1 {
+
+		}
+
+		var err error
+		for i := 1; i <= s.maxRetries; i++ {
+			_, err = s.conn.ExecContext(ctx, query, values...)
+			if err != nil {
+				if s.d.CanRetry(err) {
+					time.Sleep(time.Millisecond * 500)
+					continue
+				}
+			}
+			break
+		}
 		if err != nil {
-			if s.isErrDuplicated(err) {
-				return errors.ErrAlreadyExists("event revision already exists")
+			c := s.d.ErrorCode(err)
+			if c == cgerrors.ErrorCode_AlreadyExists {
+				return cgerrors.ErrAlreadyExists("event revision already exists")
 			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				return errors.ErrDeadlineExceeded(err.Error())
+			if cgerrors.Is(err, context.DeadlineExceeded) {
+				return err
 			}
-			return errors.ErrInternal(err.Error())
+			return cgerrors.New("", err.Error(), c)
 		}
 		return nil
 	default:
@@ -155,29 +166,54 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 			values[(i*7)+5] = e.EventType
 			values[(i*7)+6] = e.EventData
 		}
-		tx, err := s.conn.BeginTxx(ctx, nil)
+
+		// Begin transaction.
+		var tx *sqlx.Tx
+		err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+			var err error
+			tx, err = db.BeginTxx(ctx, nil)
+			return err
+		})
 		if err != nil {
-			return errors.ErrInternal(err.Error())
+			c := s.d.ErrorCode(err)
+			if cgerrors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
+			return cgerrors.New("", err.Error(), c)
 		}
 
-		_, err = tx.ExecContext(ctx, query, values...)
+		// Execute the query.
+		err = s.tryTx(ctx, tx, func(ctx context.Context, tx *sqlx.Tx) error {
+			_, err = tx.ExecContext(ctx, query, values...)
+			return err
+		})
 		if err != nil {
-			defer tx.Rollback()
-			if s.isErrDuplicated(err) {
-				return errors.ErrAlreadyExists("one of given event revision already exists")
+			c := s.d.ErrorCode(err)
+			if c == cgerrors.ErrorCode_AlreadyExists {
+				return cgerrors.ErrAlreadyExists("event revision already exists")
 			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				return errors.ErrDeadlineExceeded(err.Error())
+			tx.Rollback()
+			if cgerrors.Is(err, context.DeadlineExceeded) {
+				return err
 			}
-			return errors.ErrInternal(err.Error())
+			return cgerrors.New("", err.Error(), c)
 		}
 
 		// Commit changes.
-		if err = tx.Commit(); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				return errors.ErrDeadlineExceeded(err.Error())
+		err = s.tryTx(ctx, tx, func(ctx context.Context, tx *sqlx.Tx) error {
+			return tx.Commit()
+		})
+		if err != nil {
+			// Rollback the transaction.
+			tx.Rollback()
+			c := s.d.ErrorCode(err)
+			if c == cgerrors.ErrorCode_AlreadyExists {
+				return cgerrors.ErrAlreadyExists("event revision already exists")
 			}
-			return errors.ErrInternal(err.Error())
+			if cgerrors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
+			return cgerrors.New("", err.Error(), c)
 		}
 		return nil
 	}
@@ -186,9 +222,14 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 // GetEventStream gets the event stream for provided aggregate.
 // Implements eventsource.Storage interface.
 func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
-	rows, err := s.conn.QueryContext(ctx, s.query.getEventStream, aggId, aggType)
+	var rows *sqlx.Rows
+	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+		var err error
+		rows, err = db.QueryxContext(ctx, s.query.getEventStream, aggId, aggType)
+		return err
+	})
 	if err != nil {
-		return nil, errors.ErrInternal(err.Error())
+		return nil, cgerrors.New("", err.Error(), s.d.ErrorCode(err))
 	}
 	defer rows.Close()
 
@@ -197,18 +238,18 @@ func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) 
 		e := &eventsource.Event{}
 		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
 		if err = rows.Scan(&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData); err != nil {
-			return nil, errors.ErrInternalf("scanning  event row failed: %v", err.Error())
+			return nil, cgerrors.ErrInternalf("scanning  event row failed: %v", err.Error())
 		}
 		stream = append(stream, e)
 	}
-	if err := rows.Err(); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	if err = rows.Err(); err != nil {
+		if cgerrors.Is(err, sql.ErrNoRows) {
 			return stream, nil
 		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, errors.ErrDeadlineExceeded(err.Error())
+		if cgerrors.Is(err, context.DeadlineExceeded) {
+			return nil, err
 		}
-		return nil, errors.ErrInternal(err.Error())
+		return nil, cgerrors.New("", err.Error(), s.d.ErrorCode(err))
 	}
 	return stream, nil
 }
@@ -217,15 +258,19 @@ func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) 
 // Implements eventsource.Storage interface.
 func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapshot) error {
 	// aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data
-	_, err := s.conn.ExecContext(ctx, s.query.saveSnapshot, snap.AggregateId, snap.AggregateType, snap.AggregateVersion, snap.Revision, snap.Timestamp, snap.SnapshotData)
+	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+		_, err := s.conn.ExecContext(ctx, s.query.saveSnapshot, snap.AggregateId, snap.AggregateType, snap.AggregateVersion, snap.Revision, snap.Timestamp, snap.SnapshotData)
+		return err
+	})
 	if err != nil {
-		if s.isErrDuplicated(err) {
-			return errors.ErrAlreadyExists("one of given event revision already exists")
+		c := s.d.ErrorCode(err)
+		if c == cgerrors.ErrorCode_AlreadyExists {
+			return cgerrors.ErrAlreadyExists("one of given event revision already exists")
 		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			return errors.ErrDeadlineExceeded(err.Error())
+		if cgerrors.Is(err, context.DeadlineExceeded) {
+			return err
 		}
-		return errors.ErrInternal(err.Error())
+		return cgerrors.New("", err.Error(), c)
 	}
 	return nil
 }
@@ -234,21 +279,26 @@ func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapsho
 // Implements eventsource.Storage interface.
 func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*eventsource.Snapshot, error) {
 	// aggregate_id = ? AND aggregate_type = ? AND aggregate_version = ?
-	row := s.conn.QueryRowContext(ctx, s.query.getSnapshot, aggId, aggType, aggVersion)
-	if err := row.Err(); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, errors.ErrDeadlineExceeded(err.Error())
+	var row *sqlx.Row
+	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+		row = db.QueryRowxContext(ctx, s.query.getSnapshot, aggId, aggType, aggVersion)
+		return row.Err()
+	})
+	if err != nil {
+		if cgerrors.Is(err, context.DeadlineExceeded) {
+			return nil, err
 		}
-		return nil, errors.ErrInternal(err.Error())
+		c := s.d.ErrorCode(err)
+		return nil, cgerrors.New("", err.Error(), c)
 	}
 
 	// aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data
 	var snap eventsource.Snapshot
 	if err := row.Scan(&snap.AggregateId, &snap.AggregateType, &snap.AggregateVersion, &snap.Revision, &snap.Timestamp, &snap.SnapshotData); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.ErrNotFound("snapshot not found")
+		if cgerrors.Is(err, sql.ErrNoRows) {
+			return nil, cgerrors.ErrNotFound("snapshot not found")
 		}
-		return nil, errors.ErrInternal(err.Error())
+		return nil, cgerrors.New("", err.Error(), s.d.ErrorCode(err))
 	}
 	return &snap, nil
 }
@@ -257,7 +307,7 @@ func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType stri
 func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getStreamFromRevision, aggId, aggType, from)
 	if err != nil {
-		return nil, errors.ErrInternal(err.Error())
+		return nil, cgerrors.ErrInternal(err.Error())
 	}
 	defer rows.Close()
 
@@ -266,18 +316,44 @@ func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, ag
 		e := &eventsource.Event{}
 		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
 		if err = rows.Scan(&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData); err != nil {
-			return nil, errors.ErrInternalf("scanning  event row failed: %v", err.Error())
+			return nil, cgerrors.ErrInternalf("scanning  event row failed: %v", err.Error())
 		}
 		stream = append(stream, e)
 	}
 	if err := rows.Err(); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if cgerrors.Is(err, sql.ErrNoRows) {
 			return stream, nil
 		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, errors.ErrDeadlineExceeded(err.Error())
+		if cgerrors.Is(err, context.DeadlineExceeded) {
+			return nil, cgerrors.ErrDeadlineExceeded(err.Error())
 		}
-		return nil, errors.ErrInternal(err.Error())
+		return nil, cgerrors.ErrInternal(err.Error())
 	}
 	return stream, nil
+}
+
+func (s *sqlStorage) try(ctx context.Context, db *sqlx.DB, fn func(context.Context, *sqlx.DB) error) error {
+	var err error
+	for i := 1; i <= s.maxRetries; i++ {
+		if err = fn(ctx, db); err != nil {
+			if s.d.CanRetry(err) {
+				continue
+			}
+		}
+		break
+	}
+	return err
+}
+
+func (s *sqlStorage) tryTx(ctx context.Context, tx *sqlx.Tx, fn func(ctx context.Context, tx *sqlx.Tx) error) error {
+	var err error
+	for i := 1; i <= s.maxRetries; i++ {
+		if err = fn(ctx, tx); err != nil {
+			if s.d.CanRetry(err) {
+				continue
+			}
+		}
+		break
+	}
+	return err
 }

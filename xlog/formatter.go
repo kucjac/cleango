@@ -8,7 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 )
 
 // TextFormatter is struct implementing Format interface
@@ -35,7 +35,7 @@ func NewTextFormatter(colors bool) *TextFormatter {
 // Format implements `logrus.Formatter`.
 func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 	x, err := ExtractHTTPField(entry.Data)
-	if err != nil && !errors.Is(err, NoHTTPOpt) {
+	if err != nil && !cgerrors.Is(err, NoHTTPOpt) {
 		return nil, err
 	}
 	if err == nil {
