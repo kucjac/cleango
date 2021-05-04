@@ -1,31 +1,20 @@
 package xpubsub
 
 import (
-	"context"
-
+	"github.com/kucjac/cleango/codec"
 	"gocloud.dev/pubsub"
 )
 
-// Message is a pubsub message wrapper that contains a context.
-type Message struct {
-	ctx context.Context
-	*pubsub.Message
+// MarshalMessage is a function that marshals input message structure into the pubsub.Message body.
+func MarshalMessage(c codec.Codec, msg interface{}) (*pubsub.Message, error) {
+	data, err := c.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	return &pubsub.Message{Body: data}, nil
 }
 
-// WithContext sets up the context of the message.
-func (m *Message) WithContext(ctx context.Context) *Message {
-	if ctx == nil {
-		panic("nil context")
-	}
-	m2 := new(Message)
-	m2.ctx = ctx
-	return m2
-}
-
-// Context receives the context of the message.
-func (m *Message) Context() context.Context {
-	if m.ctx == nil {
-		return context.Background()
-	}
-	return m.ctx
+// UnmarshalMessage unmarshals message body into provided destination using given codec.
+func UnmarshalMessage(c codec.Codec, msg *pubsub.Message, dst interface{}) error {
+	return c.Unmarshal(msg.Body, dst)
 }
