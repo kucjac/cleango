@@ -332,6 +332,11 @@ func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, ag
 	return stream, nil
 }
 
+func (s *sqlStorage) StreamEvents(ctx context.Context, req *eventsource.StreamEventsRequest) (<-chan *eventsource.Event, error) {
+	c := s.newStreamCursor(ctx, req)
+	return c.openChannel()
+}
+
 func (s *sqlStorage) try(ctx context.Context, db *sqlx.DB, fn func(context.Context, *sqlx.DB) error) error {
 	var err error
 	for i := 1; i <= s.maxRetries; i++ {

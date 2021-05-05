@@ -16,7 +16,8 @@ const (
 	batchInsertQueryBase       = `INSERT INTO %s (aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data) VALUES `
 	insertAggregate            = `INSERT INTO %s (aggregate_id, inserted_at) VALUES (?, ?)`
 	// listAggregates             = `SELECT id, aggregate_id FROM %s WHERE aggregate_type = ? LIMIT ? ORDER BY id`
-	listNextAggregates = `SELECT id, aggregate_id FROM %s WHERE aggregate_type = ? and id > ? LIMIT ? ORDER BY id`
+	listNextAggregates   = `SELECT id, aggregate_id FROM %s WHERE aggregate_type = ? AND id > ? LIMIT ? ORDER BY id`
+	listEventStreamQuery = `SELECT id, aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data FROM %s `
 )
 
 type queries struct {
@@ -27,6 +28,7 @@ type queries struct {
 	insertEvent           string
 	insertAggregate       string
 	listNextAggregates    string
+	listEventStreamQuery  string
 }
 
 func (q queries) batchInsertEvent(length int) string {
@@ -48,5 +50,6 @@ func newQueries(conn *sqlx.DB, c *Config) queries {
 		insertEvent:           conn.Rebind(fmt.Sprintf(insertEventQuery, c.eventTableName())),
 		insertAggregate:       conn.Rebind(fmt.Sprintf(insertAggregate, c.aggregateTableName())),
 		listNextAggregates:    conn.Rebind(fmt.Sprintf(listNextAggregates, c.aggregateTableName())),
+		listEventStreamQuery:  conn.Rebind(fmt.Sprintf(listEventStreamQuery, c.eventTableName())),
 	}
 }

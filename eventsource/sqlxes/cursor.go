@@ -70,7 +70,7 @@ func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapsh
 		default:
 		}
 		var rows *sqlx.Rows
-		rows, err = c.conn.QueryxContext(c.ctx, c.query.listNextAggregates)
+		rows, err = c.conn.QueryxContext(c.ctx, c.query.listNextAggregates, c.aggType, c.lastTakenID, c.limit)
 		if err != nil {
 			if c.driver.CanRetry(err) {
 				continue

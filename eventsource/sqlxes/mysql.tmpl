@@ -7,8 +7,13 @@ CREATE TABLE {{.EventTable}} (
     timestamp bigint NOT NULL,
     event_type varchar(255) NOT NULL,
     event_data blob,
-    CONSTRAINT aggregate_revision UNIQUE (aggregate_id, revision)
+    CONSTRAINT {{.EventTable}}_event_id_uindex UNIQUE(event_id),
+    CONSTRAINT {{.EventTable}}_aggregate_revision_uindex UNIQUE (aggregate_id, revision)
 );
+
+CREATE INDEX {{.EventTable}}_aggregate_id_idx ON {{.EventTable}} (aggregate_id);
+CREATE INDEX {{.EventTable}}_aggregate_type_idx ON {{.EventTable}} (aggregate_type);
+CREATE INDEX {{.EventTable}}_event_type_idx ON {{.EventTable}} (event_type);
 
 CREATE TABLE {{.SnapshotTable}} (
     id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
