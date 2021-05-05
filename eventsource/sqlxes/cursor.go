@@ -47,13 +47,13 @@ func (s *sqlStorage) newCursor(ctx context.Context, aggType string, aggVersion i
 	}
 }
 
-func (c *cursor) OpenChannel() (<-chan *eventsource.CursorAggregate, error) {
+func (c *cursor) OpenChannel(withSnapshots bool) (<-chan *eventsource.CursorAggregate, error) {
 	ch := make(chan *eventsource.CursorAggregate, c.limit)
-	go c.readAggregates(ch)
+	go c.readAggregates(ch, withSnapshots)
 	return ch, nil
 }
 
-func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate) {
+func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapshots bool) {
 	var err error
 	errChan := make(chan error, 1)
 
@@ -104,7 +104,7 @@ func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate) {
 					break rowsLoop
 				}
 			}
-			go c.readAggregate(aggregateId, ca, errChan)
+			go c.readAggregate(aggregateId, ca, errChan, withSnapshots)
 		}
 		rows.Close()
 		if err != nil {
@@ -144,7 +144,7 @@ func (c *cursor) initializeWorkers() {
 	}
 }
 
-func (c *cursor) readAggregate(aggregateId string, ac chan<- *eventsource.CursorAggregate, ec chan<- error) {
+func (c *cursor) readAggregate(aggregateId string, ac chan<- *eventsource.CursorAggregate, ec chan<- error, withSnapshots bool) {
 	defer func() {
 		// Return the worker to the pool of workers.
 		c.workers <- struct{}{}
@@ -152,11 +152,13 @@ func (c *cursor) readAggregate(aggregateId string, ac chan<- *eventsource.Cursor
 
 	var err error
 	agg := &eventsource.CursorAggregate{AggregateID: aggregateId}
-	agg.Snapshot, err = c.s.GetSnapshot(c.ctx, aggregateId, c.aggType, c.aggVersion)
-	if err != nil {
-		if !cgerrors.IsNotFound(err) {
-			ec <- err
-			return
+	if withSnapshots {
+		agg.Snapshot, err = c.s.GetSnapshot(c.ctx, aggregateId, c.aggType, c.aggVersion)
+		if err != nil {
+			if !cgerrors.IsNotFound(err) {
+				ec <- err
+				return
+			}
 		}
 	}
 
