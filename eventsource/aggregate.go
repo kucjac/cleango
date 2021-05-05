@@ -3,7 +3,7 @@ package eventsource
 import (
 	"time"
 
-	codec2 "github.com/kucjac/cleango/codec"
+	"github.com/kucjac/cleango/codec"
 	"github.com/kucjac/cleango/xlog"
 )
 
@@ -24,8 +24,8 @@ type AggregateBase struct {
 	id                string
 	aggType           string
 	agg               Aggregate
-	eventCodec        codec2.Codec
-	snapCodec         codec2.Codec
+	eventCodec        codec.Codec
+	snapCodec         codec.Codec
 	idGen             IdGenerator
 	timestamp         int64
 	uncommittedEvents []*Event

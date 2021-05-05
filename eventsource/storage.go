@@ -19,7 +19,7 @@ type Storage interface {
 
 // Cursor is an interface used by the storages that enables listing the aggregates.
 type Cursor interface {
-	OpenChannel() (<-chan *CursorAggregate, error)
+	OpenChannel(withSnapshot bool) (<-chan *CursorAggregate, error)
 }
 
 // CursorAggregate is an aggregate events and snapshot taken by the cursor.

@@ -2,6 +2,7 @@ package eventsource
 
 import (
 	"context"
+	"time"
 )
 
 //go:generate protoc -I=. --go_out=. event.proto --go_opt=paths=source_relative
@@ -22,6 +23,10 @@ func (x *Event) Copy() *Event {
 		Timestamp:     x.Timestamp,
 		Revision:      x.Revision,
 	}
+}
+
+func (x *Event) Time() time.Time {
+	return time.Unix(x.Timestamp, 0)
 }
 
 // EventHandler is an interface used for handling events.

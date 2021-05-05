@@ -18,6 +18,13 @@ type EventStore interface {
 	Commit(ctx context.Context, aggregate Aggregate) error
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
 	StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error)
+	StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error)
+}
+
+type StreamProjectionsRequest struct {
+	AggregateType    string
+	AggregateVersion int64
+	Factory          ProjectionFactory
 }
 
 // New creates new EventStore implementation.
@@ -178,6 +185,16 @@ func (e *eventStore) StreamAggregates(ctx context.Context, aggType string, aggVe
 		return nil, err
 	}
 
-	l := newLoader(c, aggType, aggVersion, factory, e.bufferSize)
-	return l.readChannel()
+	l := newAggregateLoader(c, aggType, aggVersion, factory, e.bufferSize)
+	return l.readAggregateChannel()
+}
+
+func (e *eventStore) StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error) {
+	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	l := newProjectionLoader(e.eventCodec, c, aggType, aggVersion, factory, e.bufferSize)
+	return l.readProjectionChannel()
 }
