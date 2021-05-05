@@ -15,6 +15,7 @@ type Storage interface {
 	GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*Snapshot, error)
 	GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*Event, error)
 	NewCursor(ctx context.Context, aggType string, aggVersion int64) (Cursor, error)
+	StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error)
 }
 
 // Cursor is an interface used by the storages that enables listing the aggregates.

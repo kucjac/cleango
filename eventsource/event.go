@@ -26,7 +26,7 @@ func (x *Event) Copy() *Event {
 }
 
 func (x *Event) Time() time.Time {
-	return time.Unix(x.Timestamp, 0)
+	return time.Unix(0, x.Timestamp)
 }
 
 // EventHandler is an interface used for handling events.

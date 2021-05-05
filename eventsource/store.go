@@ -17,14 +17,17 @@ type EventStore interface {
 	LoadEventStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
 	Commit(ctx context.Context, aggregate Aggregate) error
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
+	StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error)
 	StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error)
 	StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error)
 }
 
-type StreamProjectionsRequest struct {
-	AggregateType    string
-	AggregateVersion int64
-	Factory          ProjectionFactory
+type StreamEventsRequest struct {
+	AggregateTypes    []string
+	AggregateIDs      []string
+	ExcludeEventTypes []string
+	EventTypes        []string
+	BuffSize          int
 }
 
 // New creates new EventStore implementation.
@@ -168,7 +171,7 @@ func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
 			// Make a copy of given event.
 			b.revision++
 			event.Revision = b.revision
-			event.Timestamp = time.Now().Unix()
+			event.Timestamp = time.Now().UTC().UnixNano()
 			if err = agg.Apply(event); err != nil {
 				return err
 			}
@@ -197,4 +200,8 @@ func (e *eventStore) StreamProjections(ctx context.Context, aggType string, aggV
 
 	l := newProjectionLoader(e.eventCodec, c, aggType, aggVersion, factory, e.bufferSize)
 	return l.readProjectionChannel()
+}
+
+func (e *eventStore) StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error) {
+	return e.storage.StreamEvents(ctx, req)
 }

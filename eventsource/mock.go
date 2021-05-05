@@ -139,3 +139,18 @@ func (mr *MockStoreMockRecorder) StreamProjections(arg0, arg1, arg2, arg3 interf
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamProjections", reflect.TypeOf((*MockStore)(nil).StreamProjections), arg0, arg1, arg2, arg3)
 }
+
+// StreamEvents mocks base method.
+func (m *MockStore) StreamEvents(arg0 context.Context, arg1 *StreamEventsRequest) (<-chan *Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamEvents", arg0, arg1)
+	ret0, _ := ret[0].(<-chan *Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamEvents indicates an expected call of StreamEvents.
+func (mr *MockStoreMockRecorder) StreamEvents(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEvents", reflect.TypeOf((*MockStore)(nil).StreamEvents), arg0, arg1)
+}

@@ -122,3 +122,18 @@ func (mr *MockStorageMockRecorder) SaveSnapshot(arg0, arg1 interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveSnapshot", reflect.TypeOf((*MockStorage)(nil).SaveSnapshot), arg0, arg1)
 }
+
+// StreamEvents mocks base method.
+func (m *MockStorage) StreamEvents(arg0 context.Context, arg1 *eventsource.StreamEventsRequest) (<-chan *eventsource.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamEvents", arg0, arg1)
+	ret0, _ := ret[0].(<-chan *eventsource.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamEvents indicates an expected call of StreamEvents.
+func (mr *MockStorageMockRecorder) StreamEvents(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEvents", reflect.TypeOf((*MockStorage)(nil).StreamEvents), arg0, arg1)
+}

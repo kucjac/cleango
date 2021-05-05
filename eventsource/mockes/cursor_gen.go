@@ -35,16 +35,16 @@ func (m *MockCursor) EXPECT() *MockCursorMockRecorder {
 }
 
 // OpenChannel mocks base method.
-func (m *MockCursor) OpenChannel() (<-chan *eventsource.CursorAggregate, error) {
+func (m *MockCursor) OpenChannel(arg0 bool) (<-chan *eventsource.CursorAggregate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OpenChannel")
+	ret := m.ctrl.Call(m, "OpenChannel", arg0)
 	ret0, _ := ret[0].(<-chan *eventsource.CursorAggregate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // OpenChannel indicates an expected call of OpenChannel.
-func (mr *MockCursorMockRecorder) OpenChannel() *gomock.Call {
+func (mr *MockCursorMockRecorder) OpenChannel(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenChannel", reflect.TypeOf((*MockCursor)(nil).OpenChannel))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenChannel", reflect.TypeOf((*MockCursor)(nil).OpenChannel), arg0)
 }

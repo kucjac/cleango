@@ -78,7 +78,7 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 		AggregateType: a.aggType,
 		AggregateId:   a.id,
 		EventData:     eventData,
-		Timestamp:     time.Now().UTC().Unix(),
+		Timestamp:     time.Now().UTC().UnixNano(),
 		Revision:      revision + 1,
 	}
 
