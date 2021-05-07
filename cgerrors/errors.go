@@ -48,11 +48,11 @@ type GRPCError interface {
 }
 
 // ToGRPCError converts an error to GRPC status.Status.
-func ToGRPCError(err error) *status.Status {
+func ToGRPCError(err error) error {
 	if e, ok := err.(GRPCError); ok {
-		return e.GRPCStatus()
+		return e.GRPCStatus().Err()
 	}
-	return newError(Code(err), err.Error()).GRPCStatus()
+	return newError(Code(err), err.Error()).GRPCStatus().Err()
 }
 
 // GRPCStatus implements grpc client interface used to convert statuses.
