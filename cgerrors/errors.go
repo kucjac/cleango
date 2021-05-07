@@ -42,6 +42,19 @@ func (x *Error) WithCode(code ErrorCode) *Error {
 	return x
 }
 
+// GRPCError is an interface used to get grpcStatus
+type GRPCError interface {
+	GRPCStatus() *status.Status
+}
+
+// ToGRPCError converts an error to GRPC status.Status.
+func ToGRPCError(err error) *status.Status {
+	if e, ok := err.(GRPCError); ok {
+		return e.GRPCStatus()
+	}
+	return newError(Code(err), err.Error()).GRPCStatus()
+}
+
 // GRPCStatus implements grpc client interface used to convert statuses.
 func (x *Error) GRPCStatus() *status.Status {
 	return status.New(x.Code.ToGRPCCode(), x.Error())
