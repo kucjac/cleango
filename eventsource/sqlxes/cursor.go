@@ -100,6 +100,7 @@ func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapsh
 				err = c.ctx.Err()
 				break
 			case _, ok := <-c.workers:
+				// The channel of workers is already closed.
 				if !ok {
 					break rowsLoop
 				}
@@ -117,6 +118,7 @@ func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapsh
 		}
 	}
 
+	// If an error occurred log it's content, no matter what we need to close the channels.
 	if err != nil {
 		xlog.Errorf("reading aggregates failed: %v", err)
 	}

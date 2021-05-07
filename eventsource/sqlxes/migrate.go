@@ -33,6 +33,10 @@ func init() {
 // The table names are taken from the config.
 func Migrate(config *Config, conn *sqlx.DB) error {
 	var buf bytes.Buffer
+	if err := config.Validate(); err != nil {
+		return err
+	}
+
 	switch conn.DriverName() {
 	case "pg", "postgres", "postgresql", "gopg", "pgx":
 		if err := migratePostgres.Execute(&buf, config); err != nil {
