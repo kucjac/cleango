@@ -19,7 +19,7 @@ func RunService(ctx context.Context, s RunnerCloser) error {
 	ctx, cancel := context.WithCancel(ctx)
 	errorChan := make(chan error, 1)
 
-	// Run the service.
+	// Start the service.
 	go func(s Runner, cancel context.CancelFunc) {
 		var err error
 		if err = s.Run(); err != nil {

@@ -12,7 +12,12 @@ type Transactioner interface {
 	Rollback() error
 }
 
-// Runner is an interface used for the services which allows to run it.
+// Runner is an interface used for the services which allows to runSub it.
 type Runner interface {
 	Run() error
+}
+
+// Closer is an interface used for the services which allows to got closed.
+type Closer interface {
+	Close() error
 }
