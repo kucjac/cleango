@@ -2,6 +2,7 @@ package cgerrors
 
 import (
 	"gocloud.dev/gcerrors"
+	"google.golang.org/grpc/codes"
 )
 
 // ErrorCoder is an interface used to obtain an error code from given error within given implementation.
@@ -18,6 +19,48 @@ func Code(err error) ErrorCode {
 		return e.ErrorCode(err)
 	}
 	return fromGCErrors(gcerrors.Code(err))
+}
+
+// ToGRPCCode gets the related grpc code.
+func (x ErrorCode) ToGRPCCode() codes.Code {
+	switch x {
+	case ErrorCode_OK:
+		return codes.OK
+	case ErrorCode_Canceled:
+		return codes.Canceled
+	case ErrorCode_Unknown:
+		return codes.Unknown
+	case ErrorCode_InvalidArgument:
+		return codes.InvalidArgument
+	case ErrorCode_DeadlineExceeded:
+		return codes.DeadlineExceeded
+	case ErrorCode_NotFound:
+		return codes.NotFound
+	case ErrorCode_AlreadyExists:
+		return codes.AlreadyExists
+	case ErrorCode_PermissionDenied:
+		return codes.PermissionDenied
+	case ErrorCode_ResourceExhausted:
+		return codes.ResourceExhausted
+	case ErrorCode_FailedPrecondition:
+		return codes.FailedPrecondition
+	case ErrorCode_Aborted:
+		return codes.Aborted
+	case ErrorCode_OutOfRange:
+		return codes.OutOfRange
+	case ErrorCode_Unimplemented:
+		return codes.Unimplemented
+	case ErrorCode_Internal:
+		return codes.Internal
+	case ErrorCode_Unavailable:
+		return codes.Unavailable
+	case ErrorCode_DataLoss:
+		return codes.DataLoss
+	case ErrorCode_Unauthenticated:
+		return codes.Unauthenticated
+	default:
+		return codes.Unknown
+	}
 }
 
 func fromGCErrors(code gcerrors.ErrorCode) ErrorCode {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/kucjac/cleango/internal/uniqueid"
+	"google.golang.org/grpc/status"
 )
 
 var g = uniqueid.NextGenerator("errors")
@@ -39,6 +40,11 @@ func (x *Error) WithProcess(process string) *Error {
 func (x *Error) WithCode(code ErrorCode) *Error {
 	x.Code = code
 	return x
+}
+
+// GRPCStatus implements grpc client interface used to convert statuses.
+func (x *Error) GRPCStatus() *status.Status {
+	return status.New(x.Code.ToGRPCCode(), x.Error())
 }
 
 // Is compares the errors with their values.
