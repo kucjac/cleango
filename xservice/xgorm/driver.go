@@ -10,8 +10,8 @@ import (
 
 var _ xservice.Driver = (*driver)(nil)
 
-// New creates a new gorm driver.
-func New(baseDriver xservice.Driver) (xservice.Driver, error) {
+// NewDriver creates a new gorm driver.
+func NewDriver(baseDriver xservice.Driver) (xservice.Driver, error) {
 	if baseDriver == nil {
 		return nil, errors.New("xgorm provided nil base driver")
 	}
