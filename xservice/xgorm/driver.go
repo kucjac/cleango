@@ -15,7 +15,15 @@ func NewDriver(baseDriver xservice.Driver) (xservice.Driver, error) {
 	if baseDriver == nil {
 		return nil, errors.New("xgorm provided nil base driver")
 	}
-	return &driver{base: baseDriver}, nil
+	return wrapDriver(baseDriver), nil
+}
+
+func wrapDriver(drv xservice.Driver) xservice.Driver {
+	d, ok := drv.(*driver)
+	if ok {
+		return d
+	}
+	return &driver{base: drv}
 }
 
 type driver struct {

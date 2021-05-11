@@ -17,15 +17,16 @@ type Adapter struct {
 
 // NewAdapter creates a new gorm based adapter. If the input driver is not a GORM driver,
 // it would be wrapped by the xgorm.driver.
-func NewAdapter(db *gorm.DB, drv xservice.Driver, retryCount int) *Adapter {
-	if _, ok := drv.(*driver); !ok {
-		drv, _ = New(drv)
+func NewAdapter(db *gorm.DB, drv xservice.Driver, retryCount int) (*Adapter, error) {
+	wrappedDriver, err := NewDriver(drv)
+	if err != nil {
+		return nil, err
 	}
 	return &Adapter{
 		DB:         db,
-		driver:     drv,
+		driver:     wrappedDriver,
 		RetryCount: retryCount,
-	}
+	}, nil
 }
 
 // Health implements health check for the service.
