@@ -22,10 +22,11 @@ func New(name string) *Service {
 
 // Service is an implementation of the service that allows to start and close ports and other RunnerCloser.
 type Service struct {
-	name    string
-	runners []RunnerCloser
-	closers []Closer
-	err     error
+	name              string
+	runners           []RunnerCloser
+	closers           []Closer
+	err               error
+	RunWithoutRunners bool
 }
 
 // With sets the sub runner (port) that would be started and closed along with the service.
@@ -40,6 +41,9 @@ func (s *Service) WithCloser(closer Closer) {
 
 // Run establish connection for all dialers in the service.
 func (s *Service) Run() error {
+	if err := s.canRun(); err != nil {
+		return err
+	}
 	if err := s.run(); err != nil {
 		s.err = err
 	}
@@ -85,7 +89,7 @@ func (s *Service) serve(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		xlog.Infof("Service context had finished.")
+		xlog.Infof("Service: '%s' context had finished.", s.name)
 	case sig := <-quit:
 		xlog.Infof("Received Signal: '%s'. Shutdown Server begins...", sig.String())
 	case err := <-errorChan:
@@ -96,10 +100,10 @@ func (s *Service) serve(ctx context.Context) error {
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 	if err := s.Close(); err != nil {
-		xlog.Errorf("Server shutdown failed: %v", err)
+		xlog.Errorf("Service: '%s' shutdown failed: %v", s.name, err)
 		return err
 	}
-	xlog.Info("Server had shutdown successfully.")
+	xlog.Info("Service: '%s' had shutdown successfully.", s.name)
 	return nil
 }
 
@@ -126,20 +130,20 @@ func (s *Service) run() error {
 
 	select {
 	case <-ctx.Done():
-		xlog.Errorf("%s - context deadline exceeded: %v", s.name, ctx.Err())
+		xlog.Errorf("Service '%s' - context deadline exceeded: %v", s.name, ctx.Err())
 		return ctx.Err()
 	case e := <-errChan:
-		xlog.Errorf("%s error: %v", s.name, e)
+		xlog.Errorf("Service '%s' error: %v", s.name, e)
 		return e
 	case <-waitChan:
-		xlog.Debugf("%s successfully started", s.name)
+		xlog.Debugf("Service '%s' successfully started", s.name)
 	}
 	return nil
 }
 
 // Close closes all connection within provided context.
 func (s *Service) Close() error {
-	xlog.Infof("Closing %s service and its runners...", s.name)
+	xlog.Infof("Closing Service '%s' and its runners...", s.name)
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancelFunc()
@@ -161,13 +165,13 @@ func (s *Service) Close() error {
 
 	select {
 	case <-ctx.Done():
-		xlog.Errorf("Close %s - context deadline exceeded: %v", s.name, ctx.Err())
+		xlog.Errorf("Close Service '%s' - context deadline exceeded: %v", s.name, ctx.Err())
 		return ctx.Err()
 	case e := <-errChan:
-		xlog.Debugf("Close %s error: %v", e, s.name)
+		xlog.Errorf("Close Service '%s' error: %v", e, s.name)
 		return e
 	case <-waitChan:
-		xlog.Debugf("Closed %s all repositories with success", s.name)
+		xlog.Infof("Closed Service '%s' all repositories with success", s.name)
 	}
 	return nil
 }
@@ -232,4 +236,11 @@ func (s *Service) runSub(runner RunnerCloser, wg *sync.WaitGroup, errChan chan<-
 	}()
 	time.Sleep(time.Millisecond * 200)
 	wg.Done()
+}
+
+func (s *Service) canRun() error {
+	if len(s.runners) > 0 || s.RunWithoutRunners {
+		return nil
+	}
+	return cgerrors.ErrInternalf("nothing to run in: %s service", s.name)
 }
