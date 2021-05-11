@@ -127,7 +127,7 @@ func IsPermissionDenied(err error) bool {
 }
 
 // New generates a custom error.
-func New(id, detail string, code ErrorCode) error {
+func New(id, detail string, code ErrorCode) *Error {
 	e := &Error{
 		Id:     id,
 		Code:   code,
