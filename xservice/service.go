@@ -86,7 +86,7 @@ func (s *Service) serve(ctx context.Context) error {
 		var err error
 		if err = s.run(); err != nil {
 			if cgerrors.Code(err) != cgerrors.ErrorCode_Canceled {
-				xlog.Errorf("ListenAndServe failed: %v", err)
+				xlog.Errorf("running service: %s failed: %v", s.name, err)
 				errorChan <- err
 			} else {
 				cancel()
@@ -98,7 +98,7 @@ func (s *Service) serve(ctx context.Context) error {
 	case <-ctx.Done():
 		xlog.Infof("Service: '%s' context had finished.", s.name)
 	case sig := <-quit:
-		xlog.Infof("Received Signal: '%s'. Shutdown Server begins...", sig.String())
+		xlog.Infof("Received Signal: '%s'. Shutdown Service: '%s' begins...", sig.String(), s.name)
 	case err := <-errorChan:
 		// The error from the server running.
 		return err
@@ -110,7 +110,7 @@ func (s *Service) serve(ctx context.Context) error {
 		xlog.Errorf("Service: '%s' shutdown failed: %v", s.name, err)
 		return err
 	}
-	xlog.Info("Service: '%s' had shutdown successfully.", s.name)
+	xlog.Infof("Service: '%s' had shutdown successfully.", s.name)
 	return nil
 }
 
@@ -143,7 +143,7 @@ func (s *Service) run() error {
 		xlog.Errorf("Service '%s' error: %v", s.name, e)
 		return e
 	case <-waitChan:
-		xlog.Debugf("Service '%s' successfully started", s.name)
+		xlog.Infof("Service '%s' successfully started", s.name)
 	}
 	return nil
 }
