@@ -42,17 +42,24 @@ func (s *Service) WithCloser(closer Closer) {
 // Run establish connection for all dialers in the service.
 func (s *Service) Run() error {
 	if err := s.canRun(); err != nil {
-		return err
+		s.err = err
+		return s.err
 	}
 	if err := s.run(); err != nil {
 		s.err = err
 	}
-	return nil
+	return s.err
 }
 
 // Start locks the thread and serves the service runners. The resultant channel closes when the service is finished.
 func (s *Service) Start(ctx context.Context) <-chan struct{} {
 	r := make(chan struct{}, 1)
+	if err := s.canRun(); err != nil {
+		s.err = err
+		close(r)
+		return r
+	}
+
 	go func(r chan struct{}) {
 		if err := s.serve(ctx); err != nil {
 			s.err = err
