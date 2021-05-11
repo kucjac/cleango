@@ -3,7 +3,7 @@ package xpg
 import (
 	"github.com/go-pg/pg/v10"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 )
 
 // Logger defining format for various loggers
@@ -23,7 +23,7 @@ type Conn struct {
 func Parse(dial string) (*pg.Options, error) {
 	opts, err := pg.ParseURL(dial)
 	if err != nil {
-		return opts, errors.ErrInternalf("failed to parse %s: %s", dial, err)
+		return opts, cgerrors.ErrInternalf("failed to parse %s: %s", dial, err)
 	}
 	return opts, nil
 }

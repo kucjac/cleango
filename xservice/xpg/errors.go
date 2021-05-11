@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-pg/pg/v10"
 
-	"github.com/kucjac/cleango/errors"
+	"github.com/kucjac/cleango/cgerrors"
 )
 
 const (
@@ -20,30 +20,30 @@ const (
 func ErrWrapf(e error, process string, fmt string, args ...interface{}) error {
 	// it is better to handle this directly in db functions
 	// with more details about what was not found - see GetByID functions.
-	if errors.Is(e, pg.ErrNoRows) {
-		return errors.ErrNotFoundf(fmt, args...).WithProcess(process)
+	if cgerrors.Is(e, pg.ErrNoRows) {
+		return cgerrors.ErrNotFoundf(fmt, args...).WithProcess(process)
 	}
 	switch typed := e.(type) {
 	case nil:
 		return nil
 	case pg.Error:
 		if typed.IntegrityViolation() {
-			return errors.ErrAlreadyExistsf(fmt, args...).WithProcess(process)
+			return cgerrors.ErrAlreadyExistsf(fmt, args...).WithProcess(process)
 		}
 		if typed.Field('C') == errCancelled {
 			fmt += " %v"
 			args = append(args, context.Canceled)
-			return errors.ErrDeadlineExceededf(fmt, args).WithProcess(process)
+			return cgerrors.ErrDeadlineExceededf(fmt, args).WithProcess(process)
 		}
 		args = append(args, e.Error())
 		fmt = fmt + " %s"
-		return errors.ErrInternalf(fmt, args...).WithProcess(process)
-	case *errors.Error:
+		return cgerrors.ErrInternalf(fmt, args...).WithProcess(process)
+	case *cgerrors.Error:
 		return typed
 	default:
 		args = append(args, e.Error())
 		fmt = fmt + " %s"
-		return errors.ErrInternalf(fmt, args...).WithProcess(process)
+		return cgerrors.ErrInternalf(fmt, args...).WithProcess(process)
 	}
 }
 
@@ -55,24 +55,24 @@ func ErrWrapf(e error, process string, fmt string, args ...interface{}) error {
 func ErrWrap(e error, process string, args ...interface{}) error {
 	// it is better to handle this directly in db functions
 	// with more details about what was not found - see GetByID functions.
-	if errors.Is(e, pg.ErrNoRows) {
-		return errors.ErrNotFound(args...)
+	if cgerrors.Is(e, pg.ErrNoRows) {
+		return cgerrors.ErrNotFound(args...)
 	}
 	switch typed := e.(type) {
 	case nil:
 		return nil
 	case pg.Error:
 		if typed.IntegrityViolation() {
-			return errors.ErrAlreadyExists(args...)
+			return cgerrors.ErrAlreadyExists(args...)
 		}
 		if typed.Field('C') == errCancelled {
-			return errors.ErrDeadlineExceeded(context.Canceled.Error())
+			return cgerrors.ErrDeadlineExceeded(context.Canceled.Error())
 		}
-		return errors.ErrInternal(append([]interface{}{args}, e)...)
-	case *errors.Error:
+		return cgerrors.ErrInternal(append([]interface{}{args}, e)...)
+	case *cgerrors.Error:
 		return typed
 	default:
-		return errors.ErrInternal(append([]interface{}{args}, e)...)
+		return cgerrors.ErrInternal(append([]interface{}{args}, e)...)
 
 	}
 }
