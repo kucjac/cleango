@@ -44,9 +44,6 @@ func (p *PGDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	if !ok {
 		return cgerrors.ErrorCode_Unknown
 	}
-	if e.IntegrityViolation() {
-		return cgerrors.ErrorCode_AlreadyExists
-	}
 	class := e.Field('C')
 	if class == "" {
 		return cgerrors.ErrorCode_Unknown
