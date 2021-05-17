@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/kucjac/cleango/meta"
 	"github.com/sirupsen/logrus"
 	"gocloud.dev/pubsub"
 
@@ -167,6 +168,17 @@ func MessageID(next Handler) Handler {
 	})
 }
 
+// ContextMetadata sets up the metadata from the message in the context.
+func ContextMetadata(next Handler) Handler {
+	return HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx = meta.NewContext(ctx, m.Metadata)
+		return next.Handle(ctx, m)
+	})
+}
+
 // GetMessageID returns a message ID from the given context if one is present.
 // Returns the empty string if a message ID cannot be found.
 func GetMessageID(ctx context.Context) string {
@@ -178,3 +190,5 @@ func GetMessageID(ctx context.Context) string {
 	}
 	return ""
 }
+
+

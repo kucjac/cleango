@@ -8,6 +8,7 @@ import (
 
 //go:generate mockgen -destination=mockpubsub/topic_gen.go -package=mockpubsub . Topic
 
+// Compile time check if pubsub.Topic implements Topic interface.
 var _ Topic = (*pubsub.Topic)(nil)
 
 // Topic is the interface implementation of the pubsub.Topic.
