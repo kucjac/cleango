@@ -1,6 +1,7 @@
 package xports
 
 import (
+	"context"
 	"net"
 
 	"google.golang.org/grpc"
@@ -32,7 +33,7 @@ func (g *GRPCServer) Run() error {
 }
 
 // Close stops the GRPC server.
-func (g *GRPCServer) Close() error {
+func (g *GRPCServer) Close(_ context.Context) error {
 	g.Server.GracefulStop()
 	return nil
 }

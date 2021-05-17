@@ -42,9 +42,9 @@ func RunService(ctx context.Context, s RunnerCloser) error {
 		return err
 	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*20)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
-	if err := s.Close(); err != nil {
+	if err := s.Close(ctx); err != nil {
 		xlog.Errorf("Server shutdown failed: %v", err)
 		return err
 	}

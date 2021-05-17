@@ -74,6 +74,42 @@ func (s *Service) Error() error {
 	return s.err
 }
 
+
+// Close closes all connection within provided context.
+func (s *Service) Close(ctx context.Context) error {
+	xlog.Infof("Closing Service '%s' and its runners...", s.name)
+
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*30)
+	defer cancelFunc()
+
+	wg := &sync.WaitGroup{}
+	waitChan := make(chan struct{})
+	jobs := s.closeJobsCreator(ctx, wg)
+
+	errChan := make(chan error)
+	for job := range jobs {
+		xlog.Debugf("Closing: %T", job)
+		s.closeCloser(ctx, job, wg, errChan)
+	}
+
+	go func() {
+		wg.Wait()
+		close(waitChan)
+	}()
+
+	select {
+	case <-ctx.Done():
+		xlog.Errorf("Close Service '%s' - context deadline exceeded: %v", s.name, ctx.Err())
+		return ctx.Err()
+	case e := <-errChan:
+		xlog.Errorf("Close Service '%s' error: %v", e, s.name)
+		return e
+	case <-waitChan:
+		xlog.Infof("Closed Service '%s' all repositories with success", s.name)
+	}
+	return nil
+}
+
 func (s *Service) serve(ctx context.Context) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGABRT, syscall.SIGINT, syscall.SIGTERM)
@@ -106,13 +142,14 @@ func (s *Service) serve(ctx context.Context) error {
 
 	ctx, cancel = context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
-	if err := s.Close(); err != nil {
+	if err := s.Close(ctx); err != nil {
 		xlog.Errorf("Service: '%s' shutdown failed: %v", s.name, err)
 		return err
 	}
 	xlog.Infof("Service: '%s' had shutdown successfully.", s.name)
 	return nil
 }
+
 
 func (s *Service) run() error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
@@ -148,40 +185,7 @@ func (s *Service) run() error {
 	return nil
 }
 
-// Close closes all connection within provided context.
-func (s *Service) Close() error {
-	xlog.Infof("Closing Service '%s' and its runners...", s.name)
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancelFunc()
-
-	wg := &sync.WaitGroup{}
-	waitChan := make(chan struct{})
-	jobs := s.closeJobsCreator(ctx, wg)
-
-	errChan := make(chan error)
-	for job := range jobs {
-		xlog.Debugf("Closing: %T", job)
-		s.closeCloser(job, wg, errChan)
-	}
-
-	go func() {
-		wg.Wait()
-		close(waitChan)
-	}()
-
-	select {
-	case <-ctx.Done():
-		xlog.Errorf("Close Service '%s' - context deadline exceeded: %v", s.name, ctx.Err())
-		return ctx.Err()
-	case e := <-errChan:
-		xlog.Errorf("Close Service '%s' error: %v", e, s.name)
-		return e
-	case <-waitChan:
-		xlog.Infof("Closed Service '%s' all repositories with success", s.name)
-	}
-	return nil
-}
 
 func (s *Service) closeJobsCreator(ctx context.Context, wg *sync.WaitGroup) <-chan Closer {
 	out := make(chan Closer)
@@ -207,10 +211,10 @@ func (s *Service) closeJobsCreator(ctx context.Context, wg *sync.WaitGroup) <-ch
 	return out
 }
 
-func (s *Service) closeCloser(closer Closer, wg *sync.WaitGroup, errChan chan<- error) {
+func (s *Service) closeCloser(ctx context.Context, closer Closer, wg *sync.WaitGroup, errChan chan<- error) {
 	go func() {
 		defer wg.Done()
-		if err := closer.Close(); err != nil {
+		if err := closer.Close(ctx); err != nil {
 			errChan <- err
 			return
 		}

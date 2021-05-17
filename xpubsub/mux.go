@@ -64,8 +64,8 @@ func (m *Mux) Run() error {
 }
 
 // Close the pubsub mux subscriptions.
-func (m *Mux) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+func (m *Mux) Close(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 	if err := m.close(ctx); err != nil {
 		return err

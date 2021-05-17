@@ -1,6 +1,7 @@
 package xports
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -29,7 +30,7 @@ func (h *HttpServer) Run() error {
 }
 
 // Close stops the http server.
-func (h *HttpServer) Close() error {
+func (h *HttpServer) Close(_ context.Context) error {
 	return h.Server.Close()
 }
 
