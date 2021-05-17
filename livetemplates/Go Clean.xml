@@ -1,0 +1,56 @@
+<templateSet group="Go Clean">
+  <template name="cgEvent" value="//&#10;// $MODEL$$EVENT$ Event&#10;//&#10;&#10;&#10;// New$EVENT_MODEL$ is a constructor for the $EVENT_MODEL$ event.&#10;func New$EVENT_MODEL$() $EVENT_MODEL_TYPE$ {&#10;    return $EVENT_MODEL_INIT${}&#10;}&#10;&#10;$MODEL_EVENT_STRUCT$&#10;&#10;&#10;// $EVENT_MESSAGE_TYPE$ is the type used by the $MODEL$ aggregate on the $EVENT$ event.&#10;const $EVENT_MESSAGE_TYPE$ = &quot;$AGGREGATE$:$EVENT_SNAKE$&quot;&#10;&#10;// MessageType gets the type of the event.&#10;// Implements messages.Message interface.&#10;func ($RECEIVER$ $EVENT_MODEL_TYPE$) MessageType() string {&#10;    return $EVENT_MESSAGE_TYPE$&#10;}&#10;&#10;// $EVENT_MODEL_TOPIC$ is the topic used by the $MODEL$ aggregate on the $EVENT$ event.&#10;const $EVENT_MODEL_TOPIC$ = &quot;$DOMAIN$.$AGGREGATE$.$EVENT_SNAKE$&quot;&#10;&#10;// MessageTopic returns messages.Topic from given message.&#10;// Implements messages.Message interface.&#10;func ($RECEIVER$ $EVENT_MODEL_TYPE$) MessageTopic() string {&#10;    return $EVENT_MODEL_TOPIC$&#10;}&#10;&#10;// Validate implements validator.Validator interface.&#10;func ($RECEIVER$ $EVENT_MODEL_TYPE$) Validate() error {    &#10;    err := validation.ValidateStruct($RECEIVER$, &#10;        validation.Field(&amp;$RECEIVER$.FieldName, validation.Required),&#10;    )&#10;    if err == nil {&#10;        return nil        &#10;    }    &#10;    ve, ok  := err.(validation.Errors)&#10;    if !ok {&#10;        return cgerrors.ErrInvalidArgumentf(&quot;invalid input: %v&quot;,err).WithProcess($RECEIVER$.MessageType())&#10;    }&#10;    er := cgerrors.ErrInvalidArgument(&quot;invalid input&quot;).WithProcess($RECEIVER$.MessageType())&#10;    for k, v := range ve {&#10;        er.Meta[k] = v.Error()&#10;    }&#10;    return er    &#10;}" shortcut="ENTER" description="Clean Go Event" toReformat="false" toShortenFQNames="true">
+    <variable name="MODEL" expression="" defaultValue="&quot;Order&quot;" alwaysStopAt="true" />
+    <variable name="EVENT" expression="" defaultValue="&quot;Placed&quot;" alwaysStopAt="true" />
+    <variable name="EVENT_MODEL" expression="enum(concat(MODEL,EVENT),concat(&quot;Event&quot;,MODEL,EVENT))" defaultValue="" alwaysStopAt="true" />
+    <variable name="MODEL_EVENT_STRUCT" expression="enum(concat(&quot;type &quot;,EVENT_MODEL,&quot; struct{}&quot;), &quot;&quot;) " defaultValue="" alwaysStopAt="true" />
+    <variable name="EVENT_MODEL_TYPE" expression="enum(concat(&quot;*&quot;,EVENT_MODEL), EVENT_MODEL)" defaultValue="" alwaysStopAt="true" />
+    <variable name="EVENT_MODEL_INIT" expression="enum(concat(&quot;&amp;&quot;,EVENT_MODEL), EVENT_MODEL)" defaultValue="" alwaysStopAt="true" />
+    <variable name="AGGREGATE" expression="snakeCase(MODEL)" defaultValue="&quot;aggregate&quot;" alwaysStopAt="true" />
+    <variable name="EVENT_SNAKE" expression="snakeCase(EVENT)" defaultValue="&quot;event&quot;" alwaysStopAt="true" />
+    <variable name="RECEIVER" expression="" defaultValue="&quot;x&quot;" alwaysStopAt="true" />
+    <variable name="EVENT_MESSAGE_TYPE" expression="concat(EVENT_MODEL,&quot;Type&quot;)" defaultValue="&quot;EventOrderPlacedType&quot;" alwaysStopAt="true" />
+    <variable name="DOMAIN" expression="" defaultValue="&quot;domain&quot;" alwaysStopAt="true" />
+    <variable name="EVENT_MODEL_TOPIC" expression="concat(EVENT_MODEL,&quot;Topic&quot;)" defaultValue="&quot;EventOrderPlacedTopic&quot;" alwaysStopAt="true" />
+    <context>
+      <option name="GO_FILE" value="true" />
+    </context>
+  </template>
+  <template name="cgCommand" value="&#10;//&#10;// $COMMAND$$MODEL$ $VERSION$ Command&#10;//&#10;&#10;// New$COMMAND$$MODEL$Request$VERSION$ is a constructor for the $COMMAND_REQUEST$ event.&#10;func New$COMMAND_REQUEST$() $COMMAND_REQUEST_TYPE$ {&#10;    return $COMMAND_REQUEST_INIT${}&#10;}&#10;&#10;// MessageType defines command message type.&#10;func ($RECEIVER$ $COMMAND_MODEL_TYPE$) MessageType() string {&#10;    return &quot;$SNAKE_MODEL$:$SNAKE_COMMAND$&quot;&#10;}&#10;&#10;// Validate implements validator.Validator interface.&#10;func ($RECEIVER$ $COMMAND_MODEL_TYPE$) Validate() error{&#10;    err := validation.ValidateStruct($RECEIVER$, &#10;        // validation.Field(&amp;$RECEIVER$.$FIELD$, validation.Required),&#10;    )&#10;    if err == nil {&#10;        return nil        &#10;    }    &#10;    ve, ok  := err.(validation.Errors)&#10;    if !ok {&#10;        return cgerrors.ErrInvalidArgumentf(&quot;invalid input: %v&quot;, err).WithProcess($RECEIVER$.MessageType())&#10;    }&#10;    er := cgerrors.ErrInvalidArgument(&quot;invalid input&quot;)&#10;    for k, v := range ve {&#10;        er.Meta[k] = v.Error()&#10;    }&#10;    return er&#10;}" shortcut="ENTER" description="Clean Go Command" toReformat="false" toShortenFQNames="true">
+    <variable name="COMMAND" expression="" defaultValue="&quot;Place&quot;" alwaysStopAt="true" />
+    <variable name="MODEL" expression="" defaultValue="&quot;Order&quot;" alwaysStopAt="true" />
+    <variable name="VERSION" expression="" defaultValue="&quot;V1&quot;" alwaysStopAt="true" />
+    <variable name="COMMAND_REQUEST" expression="concat(COMMAND,MODEL,&quot;Request&quot;,VERSION)" defaultValue="" alwaysStopAt="true" />
+    <variable name="COMMAND_REQUEST_TYPE" expression="enum(concat(&quot;*&quot;,COMMAND_REQUEST),COMMAND_REQUEST)" defaultValue="" alwaysStopAt="true" />
+    <variable name="COMMAND_REQUEST_INIT" expression="enum(concat(&quot;&amp;&quot;,COMMAND_REQUEST),COMMAND_REQUEST)" defaultValue="" alwaysStopAt="true" />
+    <variable name="RECEIVER" expression="" defaultValue="&quot;x&quot;" alwaysStopAt="true" />
+    <variable name="COMMAND_MODEL_TYPE" expression="concat(&quot;*&quot;,COMMAND,MODEL,&quot;Request&quot;,VERSION)" defaultValue="" alwaysStopAt="true" />
+    <variable name="SNAKE_MODEL" expression="snakeCase(MODEL)" defaultValue="" alwaysStopAt="true" />
+    <variable name="SNAKE_COMMAND" expression="snakeCase(COMMAND)" defaultValue="" alwaysStopAt="true" />
+    <variable name="FIELD" expression="" defaultValue="concat(MODEL,&quot;Id&quot;)" alwaysStopAt="true" />
+    <context>
+      <option name="GO_FILE" value="true" />
+    </context>
+  </template>
+  <template name="cgValidate" value="// Validate the $TYPE$ fields and parameters.&#10;func (x *$TYPE$) Validate() error {&#10;    err := validation.ValidateStruct(x,&#10;&#9;&#9;// Validate specific fields. &#10;&#9;&#9;// validation.Field(&amp;x.Key, validation.Required, validation.Length(10, 120)),&#10;&#9;)&#10;&#9;if err == nil {&#10;&#9;&#9;return nil&#10;&#9;}&#10;&#9;ve, ok := err.(validation.Errors)&#10;&#9;if !ok {&#10;&#9;&#9;return cgerrors.ErrInvalidArgumentf(&quot;invalid input: %v&quot;, err)&#10;&#9;}&#10;&#9;er := cgerrors.ErrInvalidArgument(&quot;invalid input&quot;)&#10;&#9;for k, v := range ve {&#10;&#9;&#9;er.Meta[k] = v.Error()&#10;&#9;}&#10;&#9;return er&#10;}" description="CleanGo - Creates a validation method for given type." toReformat="false" toShortenFQNames="true">
+    <variable name="TYPE" expression="" defaultValue="" alwaysStopAt="true" />
+    <context>
+      <option name="GO_FILE" value="true" />
+    </context>
+  </template>
+  <template name="cgQuery" value="//&#10;// $QUERY$$MODEL$ $VERSION$ Query&#10;//&#10;&#10;// New$QUERY$$MODEL$Request$VERSION$ is a constructor for the $QUERY_REQUEST$ event.&#10;func New$QUERY_REQUEST$() $QUERY_REQUEST_TYPE$ {&#10;    return $QUERY_REQUEST_INIT${}&#10;}&#10;&#10;// MessageType gets the type of the event.&#10;// Implements messages.Message interface.&#10;func ($RECEIVER$ $QUERY_REQUEST_TYPE$) MessageType() string {&#10;    return &quot;$DOMAIN$:$AGGREGATE$:$QUERY_SNAKE$&quot;&#10;}&#10;&#10;&#10;// Validate implements validator.Validator interface.&#10;func ($RECEIVER$ $QUERY_REQUEST_TYPE$) Validate() error {    &#10;    err := validation.ValidateStruct($RECEIVER$, &#10;        validation.Field(&amp;$RECEIVER$.FieldName, validation.Required),&#10;    )&#10;    if err == nil {&#10;        return nil        &#10;    }    &#10;    ve, ok  := err.(validation.Errors)&#10;    if !ok {&#10;        return cgerrors.ErrInvalidArgumentf(&quot;invalid input: %v&quot;,err).&#10;           WithProcess($RECEIVER$.MessageType())&#10;    }&#10;    er := cgerrors.ErrInvalidArgument(&quot;invalid input&quot;).&#10;        WithProcess($RECEIVER$.MessageType())&#10;    for k, v := range ve {&#10;        er.Meta[k] = v.Error()&#10;    }&#10;    return er    &#10;}" shortcut="ENTER" description="Clean Go Query" toReformat="false" toShortenFQNames="true">
+    <variable name="QUERY" expression="" defaultValue="&quot;Get&quot;" alwaysStopAt="true" />
+    <variable name="MODEL" expression="" defaultValue="&quot;Order&quot;" alwaysStopAt="true" />
+    <variable name="VERSION" expression="" defaultValue="&quot;V1&quot;" alwaysStopAt="true" />
+    <variable name="QUERY_REQUEST" expression="concat(QUERY, MODEL,&quot;Request&quot;,VERSION)" defaultValue="" alwaysStopAt="true" />
+    <variable name="QUERY_REQUEST_TYPE" expression="enum(concat(&quot;*&quot;,QUERY_REQUEST), QUERY_REQUEST)" defaultValue="" alwaysStopAt="true" />
+    <variable name="QUERY_REQUEST_INIT" expression="enum(concat(&quot;&amp;&quot;,QUERY_REQUEST), QUERY_REQUEST)" defaultValue="" alwaysStopAt="true" />
+    <variable name="RECEIVER" expression="" defaultValue="&quot;x&quot;" alwaysStopAt="true" />
+    <variable name="DOMAIN" expression="" defaultValue="&quot;domain&quot;" alwaysStopAt="true" />
+    <variable name="AGGREGATE" expression="snakeCase(MODEL)" defaultValue="&quot;aggregate&quot;" alwaysStopAt="true" />
+    <variable name="QUERY_SNAKE" expression="snakeCase(QUERY)" defaultValue="" alwaysStopAt="true" />
+    <context>
+      <option name="GO_FILE" value="true" />
+    </context>
+  </template>
+</templateSet>
