@@ -225,20 +225,20 @@ func MergeContext(ctx context.Context, patchMd Meta, overwrite bool) context.Con
 		ctx = context.Background()
 	}
 	md, _ := ctx.Value(metadataKey{}).(Meta)
-	cmd := make(Meta, len(md))
+	newMd := make(Meta, len(md))
 	for k, v := range md {
-		cmd[k] = v
+		newMd[k] = v
 	}
 	for k, v := range patchMd {
-		if _, ok := cmd[k]; ok && !overwrite {
+		if _, ok := newMd[k]; ok && !overwrite {
 			// skip
 		} else if v != "" {
-			cmd[k] = v
+			newMd[k] = v
 		} else {
-			delete(cmd, k)
+			delete(newMd, k)
 		}
 	}
-	return context.WithValue(ctx, metadataKey{}, cmd)
+	return context.WithValue(ctx, metadataKey{}, newMd)
 }
 
 // ContentLanguage gets the content language from the context metadata.

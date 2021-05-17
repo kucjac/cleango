@@ -174,7 +174,11 @@ func ContextMetadata(next Handler) Handler {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		ctx = meta.NewContext(ctx, m.Metadata)
+		md := m.Metadata
+		if md == nil {
+			md = map[string]string{}
+		}
+		ctx = meta.MergeContext(ctx, md, true)
 		return next.Handle(ctx, m)
 	})
 }
