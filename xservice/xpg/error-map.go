@@ -13,9 +13,10 @@ var errorMap = map[string]cgerrors.ErrorCode{
 
 	// Class 22 - Data exception
 	"22000": cgerrors.ErrorCode_InvalidArgument,
+	"23502": cgerrors.ErrorCode_InvalidArgument,// NOT-NULL Violation
 
 	// Class 23 - Integrity violation
 	"23000": cgerrors.ErrorCode_AlreadyExists,
-	"23003": cgerrors.ErrorCode_AlreadyExists,
-	"23005": cgerrors.ErrorCode_AlreadyExists,
+	"23503": cgerrors.ErrorCode_AlreadyExists,
+	"23505": cgerrors.ErrorCode_AlreadyExists,
 }
