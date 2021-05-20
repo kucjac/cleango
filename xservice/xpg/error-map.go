@@ -17,6 +17,6 @@ var errorMap = map[string]cgerrors.ErrorCode{
 
 	// Class 23 - Integrity violation
 	"23000": cgerrors.ErrorCode_AlreadyExists,
-	"23503": cgerrors.ErrorCode_AlreadyExists,
+	"23503": cgerrors.ErrorCode_NotFound, // Foreign Key Violation
 	"23505": cgerrors.ErrorCode_AlreadyExists,
 }
