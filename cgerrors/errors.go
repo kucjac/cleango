@@ -126,6 +126,12 @@ func IsPermissionDenied(err error) bool {
 	return Code(err) == ErrorCode_PermissionDenied
 }
 
+// IsUnimplemented checks if given error contains Unimplemented  code.
+func IsUnimplemented(err error) bool {
+	return Code(err) == ErrorCode_Unimplemented
+}
+
+
 // New generates a custom error.
 func New(id, detail string, code ErrorCode) *Error {
 	e := &Error{
@@ -229,6 +235,17 @@ func ErrInternal(a ...interface{}) *Error {
 func ErrInternalf(format string, a ...interface{}) *Error {
 	return newError(ErrorCode_Internal, fmt.Sprintf(format, a...))
 }
+
+// ErrUnimplemented generates Unimplemented error.
+func ErrUnimplemented(a ...interface{}) *Error{
+	return newError(ErrorCode_Unimplemented, fmt.Sprint(a...))
+}
+
+// ErrUnimplementedf generates Unimplemented error with formatting.
+func ErrUnimplementedf(format string, a ...interface{}) *Error{
+	return newError(ErrorCode_Unimplemented, fmt.Sprintf(format, a...))
+}
+
 
 // Equal tries to compare errors
 func Equal(err1 error, err2 error) bool {

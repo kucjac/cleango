@@ -1,6 +1,6 @@
-// Package meta contains a metadata store used across multiple services. It is used to pass the headers from the request
+// Package metadata contains a metadata store used across multiple services. It is used to pass the headers from the request
 // to other services.
-package meta
+package metadata
 
 import (
 	"context"
@@ -250,13 +250,22 @@ func ContentLanguage(ctx context.Context) (language.Tag, bool) {
 	return md.ContentLanguage()
 }
 
-// AcceptLanguages gets the accepted languages stored in the
+// AcceptLanguages gets the accepted languages stored in the context metadata.
 func AcceptLanguages(ctx context.Context) ([]language.Tag, bool) {
 	md, ok := FromContext(ctx)
 	if !ok {
 		return nil, false
 	}
 	return md.AcceptLanguages()
+}
+
+// AcceptLanguage gets the first accepted language stored in the context metadata.
+func AcceptLanguage(ctx context.Context) (language.Tag, bool) {
+	md, ok := FromContext(ctx)
+	if !ok {
+		return language.Tag{}, false
+	}
+	return md.AcceptLanguage()
 }
 
 // UserID gets metadata userID.

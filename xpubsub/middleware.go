@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/kucjac/cleango/meta"
+	"github.com/kucjac/cleango/metadata"
 	"github.com/sirupsen/logrus"
 	"gocloud.dev/pubsub"
 
@@ -178,7 +178,7 @@ func ContextMetadata(next Handler) Handler {
 		if md == nil {
 			md = map[string]string{}
 		}
-		ctx = meta.MergeContext(ctx, md, true)
+		ctx = metadata.MergeContext(ctx, md, true)
 		return next.Handle(ctx, m)
 	})
 }

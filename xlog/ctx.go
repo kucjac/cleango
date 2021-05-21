@@ -3,7 +3,7 @@ package xlog
 import (
 	"context"
 
-	"github.com/kucjac/cleango/meta"
+	"github.com/kucjac/cleango/metadata"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,7 +46,7 @@ func (m RequestIDHook) Levels() []logrus.Level {
 }
 
 func (m RequestIDHook) Fire(entry *logrus.Entry) error {
-	rID, ok := meta.RequestID(entry.Context)
+	rID, ok := metadata.RequestID(entry.Context)
 	if !ok {
 		return nil
 	}
@@ -64,7 +64,7 @@ func (u UserIDHook) Levels() []logrus.Level {
 }
 
 func (u UserIDHook) Fire(entry *logrus.Entry) error {
-	uID, ok := meta.UserID(entry.Context)
+	uID, ok := metadata.UserID(entry.Context)
 	if !ok {
 		return nil
 	}
