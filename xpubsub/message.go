@@ -18,3 +18,8 @@ func MarshalMessage(c codec.Codec, msg interface{}) (*pubsub.Message, error) {
 func UnmarshalMessage(c codec.Codec, msg *pubsub.Message, dst interface{}) error {
 	return c.Unmarshal(msg.Body, dst)
 }
+
+// MessageTyper is an interface used by the event messages that defines the type of the message.
+type MessageTyper interface {
+	MessageType() string
+}
