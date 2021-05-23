@@ -125,13 +125,18 @@ func (m *Mux) Subscribe(topic string, hf HandlerFunc) {
 }
 
 // Subscription registers subscription with specific handler.
-func (m *Mux) Subscription(sub *pubsub.Subscription, hf HandlerFunc) {
-	m.subRoutes = append(m.subRoutes, subscriptionRoute{
+// Optionally the topic name might be set for the logging and context passing purpose.
+func (m *Mux) Subscription(sub *pubsub.Subscription, hf HandlerFunc, topic ...string) {
+	sr := subscriptionRoute{
 		sub:         sub,
 		h:           hf,
 		middlewares: m.middlewares,
 		maxHandlers: m.maxHandlers,
-	})
+	}
+	if len(topic) > 0 {
+		sr.topic = topic[0]
+	}
+	m.subRoutes = append(m.subRoutes, sr)
 }
 
 func (m *Mux) close(ctx context.Context) error {
@@ -172,7 +177,7 @@ func (m *Mux) listenOnRoutes() error {
 		xlog.WithFields(logFields).Infof("listening at the topic: %s", r.topic)
 		m.subscribers = append(m.subscribers, sb)
 
-		go m.listenOnSubscriber(sub, r.topic, r.maxHandlers, r.middlewares.Handler(r.h))
+		go m.listenOnSubscriber(sub, sb.id, r.topic, r.maxHandlers, r.middlewares.Handler(r.h))
 	}
 	for _, ch := range m.children {
 		if err := ch.listenOnRoutes(); err != nil {
@@ -186,18 +191,22 @@ func (m *Mux) listenOnSubscriptions() error {
 	for _, r := range m.subRoutes {
 		// Create a subscription with it's unique id.
 		sb := subscriber{
-			sub: r.sub,
-			id:  uuid.NewV4().String(),
+			sub:   r.sub,
+			id:    uuid.NewV4().String(),
+			topic: r.topic,
 		}
 		// Provide log fields for given subscription.
 		logFields := logrus.Fields{
 			"id": sb.id,
 		}
+		if r.topic != "" {
+			logFields["topic"] = r.topic
+		}
 
 		xlog.WithFields(logFields).Infof("listening at the subscription: %s", sb.id)
 		m.subscribers = append(m.subscribers, sb)
 
-		go m.listenOnSubscriber(r.sub, "", r.maxHandlers, r.middlewares.Handler(r.h))
+		go m.listenOnSubscriber(r.sub, sb.id, sb.topic, r.maxHandlers, r.middlewares.Handler(r.h))
 	}
 	for _, ch := range m.children {
 		if err := ch.listenOnSubscriptions(); err != nil {
@@ -229,7 +238,7 @@ func (m *Mux) checkRoutes(mp map[string]struct{}) error {
 	return nil
 }
 
-func (m *Mux) listenOnSubscriber(sb *pubsub.Subscription, topic string, maxHandlers int, handler Handler) {
+func (m *Mux) listenOnSubscriber(sb *pubsub.Subscription, id, topic string, maxHandlers int, handler Handler) {
 	sem := make(chan struct{}, maxHandlers)
 recvLoop:
 	for {
@@ -258,7 +267,11 @@ recvLoop:
 		go func(msg *pubsub.Message, h Handler) {
 			defer func() { <-sem }() // Release the semaphore.
 			// An error should be
-			_ = h.Handle(m.ctx, msg)
+			ctx := context.WithValue(m.ctx, subIdCtxKey, id)
+			if topic != "" {
+				ctx = context.WithValue(ctx, subTopicCtxKey, topic)
+			}
+			_ = h.Handle(ctx, msg)
 		}(psMsg, handler)
 	}
 
@@ -279,6 +292,7 @@ type subscriptionRoute struct {
 	h           Handler
 	middlewares Middlewares
 	maxHandlers int
+	topic       string
 }
 
 type subscriptionCtx string
