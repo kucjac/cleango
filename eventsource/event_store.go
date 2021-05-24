@@ -8,18 +8,34 @@ import (
 	"github.com/kucjac/cleango/codec"
 )
 
+// Generate the mock store.
 //go:generate mockgen -destination=mock.go -package=eventsource . Store
 
 // EventStore is an interface used by the event store to load, commit and create snapshot on aggregates.
 type EventStore interface {
-	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
-	LoadEventStream(ctx context.Context, aggregate Aggregate) error
-	LoadEventStreamWithSnapshot(ctx context.Context, aggregate Aggregate) error
+	// LoadEvents loads all events for given aggregate.
+	LoadEvents(ctx context.Context, aggregate Aggregate) error
+
+	// LoadEventsWithSnapshot loads the latest snapshot with the events that happened after it.
+	LoadEventsWithSnapshot(ctx context.Context, aggregate Aggregate) error
+
+	// Commit commits the event changes done in given aggregate.
 	Commit(ctx context.Context, aggregate Aggregate) error
+
+	// SaveSnapshot saves the snapshot of given aggregate.
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
+
+	// StreamEvents opens stream events that matches given request.
 	StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error)
+
+	// StreamAggregates opens aggregate stream for given type and version.
 	StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error)
+
+	// StreamProjections streams the projections based on given aggregate type and version.
 	StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error)
+
+	// SetAggregateBase sets the AggregateBase within an aggregate.
+	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
 }
 
 // StreamEventsRequest is a request for the stream events query.
@@ -53,17 +69,17 @@ type Store struct {
 	bufferSize int
 }
 
-// WithStorage creates a copy of the Store structure that has a different storage.
+// CopyWithStorage creates a copy of the Store structure that has a different storage.
 // This function could be used to create transaction implementations.
-func (e *Store) WithStorage(storage Storage) *Store {
+func (e *Store) CopyWithStorage(storage Storage) *Store {
 	return &Store{aggBaseSetter: e.aggBaseSetter, snapCodec: e.snapCodec, bufferSize: e.bufferSize, storage: storage}
 }
 
-// LoadEventStream gets the event stream and applies on provided aggregate.
-func (e *Store) LoadEventStream(ctx context.Context, agg Aggregate) error {
+// LoadEvents gets the event stream and applies on provided aggregate.
+func (e *Store) LoadEvents(ctx context.Context, agg Aggregate) error {
 	b := agg.AggBase()
 	// Get the full event stream for given aggregate.
-	events, err := e.storage.GetEventStream(ctx, b.id, b.aggType)
+	events, err := e.storage.ListEvents(ctx, b.id, b.aggType)
 	if err != nil {
 		return err
 	}
@@ -84,8 +100,8 @@ func (e *Store) LoadEventStream(ctx context.Context, agg Aggregate) error {
 	return nil
 }
 
-// LoadEventStreamWithSnapshot gets the aggregate stream with the latest possible snapshot.
-func (e *Store) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
+// LoadEventsWithSnapshot gets the aggregate stream with the latest possible snapshot.
+func (e *Store) LoadEventsWithSnapshot(ctx context.Context, agg Aggregate) error {
 	// At first try to get the snapshot for given aggregate.
 	b := agg.AggBase()
 	snap, err := e.storage.GetSnapshot(ctx, b.id, b.aggType, b.version)
@@ -102,13 +118,13 @@ func (e *Store) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) 
 		b.timestamp = snap.Timestamp
 		b.revision = snap.Revision
 		// Get the event stream starting form the revision provided in the snapshot.
-		events, err = e.storage.GetStreamFromRevision(ctx, b.id, b.aggType, b.revision)
+		events, err = e.storage.ListEventsFromRevision(ctx, b.id, b.aggType, b.revision)
 		if err != nil {
 			return err
 		}
 	} else {
 		// If the snapshot is not found gets the full event stream.
-		events, err = e.storage.GetEventStream(ctx, b.id, b.aggType)
+		events, err = e.storage.ListEvents(ctx, b.id, b.aggType)
 		if err != nil {
 			return err
 		}
@@ -152,10 +168,13 @@ func (e *Store) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 	return err
 }
 
-// Commit commits provided aggregate events. In case when the
+// Commit commits provided aggregate events.
 func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 	b := agg.AggBase()
 	events := b.uncommittedEvents
+	if len(events) == 0 {
+		return nil
+	}
 	for {
 		err := e.storage.SaveEvents(ctx, events)
 		if err == nil {
@@ -171,7 +190,7 @@ func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 		// Reset aggregate and it's base.
 		agg.Reset()
 		b.reset()
-		if err = e.LoadEventStreamWithSnapshot(ctx, agg); err != nil {
+		if err = e.LoadEventsWithSnapshot(ctx, agg); err != nil {
 			return err
 		}
 
@@ -200,6 +219,7 @@ func (e *Store) StreamAggregates(ctx context.Context, aggType string, aggVersion
 	return l.readAggregateChannel()
 }
 
+// StreamProjections streams the projection of given aggregate.
 func (e *Store) StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error) {
 	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
 	if err != nil {
@@ -210,6 +230,7 @@ func (e *Store) StreamProjections(ctx context.Context, aggType string, aggVersio
 	return l.readProjectionChannel()
 }
 
+// StreamEvents opens an event stream that matches given request.
 func (e *Store) StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error) {
 	return e.storage.StreamEvents(ctx, req)
 }

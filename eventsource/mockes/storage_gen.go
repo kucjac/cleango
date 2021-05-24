@@ -35,19 +35,18 @@ func (m *MockStorage) EXPECT() *MockStorageMockRecorder {
 	return m.recorder
 }
 
-// GetEventStream mocks base method.
-func (m *MockStorage) GetEventStream(arg0 context.Context, arg1, arg2 string) ([]*eventsource.Event, error) {
+// As mocks base method.
+func (m *MockStorage) As(arg0 interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEventStream", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]*eventsource.Event)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "As", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// GetEventStream indicates an expected call of GetEventStream.
-func (mr *MockStorageMockRecorder) GetEventStream(arg0, arg1, arg2 interface{}) *gomock.Call {
+// As indicates an expected call of As.
+func (mr *MockStorageMockRecorder) As(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEventStream", reflect.TypeOf((*MockStorage)(nil).GetEventStream), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "As", reflect.TypeOf((*MockStorage)(nil).As), arg0)
 }
 
 // GetSnapshot mocks base method.
@@ -65,19 +64,34 @@ func (mr *MockStorageMockRecorder) GetSnapshot(arg0, arg1, arg2, arg3 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshot", reflect.TypeOf((*MockStorage)(nil).GetSnapshot), arg0, arg1, arg2, arg3)
 }
 
-// GetStreamFromRevision mocks base method.
-func (m *MockStorage) GetStreamFromRevision(arg0 context.Context, arg1, arg2 string, arg3 int64) ([]*eventsource.Event, error) {
+// ListEvents mocks base method.
+func (m *MockStorage) ListEvents(arg0 context.Context, arg1, arg2 string) ([]*eventsource.Event, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStreamFromRevision", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ListEvents", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]*eventsource.Event)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetStreamFromRevision indicates an expected call of GetStreamFromRevision.
-func (mr *MockStorageMockRecorder) GetStreamFromRevision(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+// ListEvents indicates an expected call of ListEvents.
+func (mr *MockStorageMockRecorder) ListEvents(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStreamFromRevision", reflect.TypeOf((*MockStorage)(nil).GetStreamFromRevision), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvents", reflect.TypeOf((*MockStorage)(nil).ListEvents), arg0, arg1, arg2)
+}
+
+// ListEventsFromRevision mocks base method.
+func (m *MockStorage) ListEventsFromRevision(arg0 context.Context, arg1, arg2 string, arg3 int64) ([]*eventsource.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEventsFromRevision", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*eventsource.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEventsFromRevision indicates an expected call of ListEventsFromRevision.
+func (mr *MockStorageMockRecorder) ListEventsFromRevision(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsFromRevision", reflect.TypeOf((*MockStorage)(nil).ListEventsFromRevision), arg0, arg1, arg2, arg3)
 }
 
 // NewCursor mocks base method.

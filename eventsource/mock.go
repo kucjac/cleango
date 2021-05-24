@@ -71,7 +71,7 @@ func (mr *MockStoreMockRecorder) Commit(arg0, arg1 interface{}) *gomock.Call {
 // LoadEventStream mocks base method.
 func (m *MockStore) LoadEventStream(arg0 context.Context, arg1 Aggregate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadEventStream", arg0, arg1)
+	ret := m.ctrl.Call(m, "LoadEvents", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -79,13 +79,13 @@ func (m *MockStore) LoadEventStream(arg0 context.Context, arg1 Aggregate) error 
 // LoadEventStream indicates an expected call of LoadEventStream.
 func (mr *MockStoreMockRecorder) LoadEventStream(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEventStream", reflect.TypeOf((*MockStore)(nil).LoadEventStream), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEvents", reflect.TypeOf((*MockStore)(nil).LoadEventStream), arg0, arg1)
 }
 
 // LoadEventStreamWithSnapshot mocks base method.
 func (m *MockStore) LoadEventStreamWithSnapshot(arg0 context.Context, arg1 Aggregate) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadEventStreamWithSnapshot", arg0, arg1)
+	ret := m.ctrl.Call(m, "LoadEventsWithSnapshot", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -93,7 +93,7 @@ func (m *MockStore) LoadEventStreamWithSnapshot(arg0 context.Context, arg1 Aggre
 // LoadEventStreamWithSnapshot indicates an expected call of LoadEventStreamWithSnapshot.
 func (mr *MockStoreMockRecorder) LoadEventStreamWithSnapshot(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEventStreamWithSnapshot", reflect.TypeOf((*MockStore)(nil).LoadEventStreamWithSnapshot), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEventsWithSnapshot", reflect.TypeOf((*MockStore)(nil).LoadEventStreamWithSnapshot), arg0, arg1)
 }
 
 // SaveSnapshot mocks base method.
