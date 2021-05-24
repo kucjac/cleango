@@ -3,6 +3,6 @@ module github.com/kucjac/cleango/xservice/xpq
 go 1.16
 
 require (
-	github.com/kucjac/cleango v0.0.8
+	github.com/kucjac/cleango v0.0.9
 	github.com/lib/pq v1.10.2
 )
