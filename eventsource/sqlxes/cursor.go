@@ -14,6 +14,7 @@ import (
 
 var _ eventsource.Cursor = (*cursor)(nil)
 
+// Cursor is the implementation of the eventsource.Cursor interface.
 type cursor struct {
 	ctx          context.Context
 	cancelFunc   context.CancelFunc
@@ -28,6 +29,14 @@ type cursor struct {
 	limit        int64
 	workersCount int
 	workers      chan struct{}
+}
+
+// GetAggregateStream opens the channel of the eventsource.CursorAggregate.
+// Implements eventsource.Cursor interface.
+func (c *cursor) GetAggregateStream(withSnapshots bool) (<-chan *eventsource.CursorAggregate, error) {
+	ch := make(chan *eventsource.CursorAggregate, c.limit)
+	go c.readAggregates(ch, withSnapshots)
+	return ch, nil
 }
 
 func (s *storage) newCursor(ctx context.Context, aggType string, aggVersion int64) eventsource.Cursor {
@@ -45,12 +54,6 @@ func (s *storage) newCursor(ctx context.Context, aggType string, aggVersion int6
 		workersCount: s.cfg.WorkersCount,
 		workers:      make(chan struct{}, s.cfg.WorkersCount),
 	}
-}
-
-func (c *cursor) OpenChannel(withSnapshots bool) (<-chan *eventsource.CursorAggregate, error) {
-	ch := make(chan *eventsource.CursorAggregate, c.limit)
-	go c.readAggregates(ch, withSnapshots)
-	return ch, nil
 }
 
 func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapshots bool) {
@@ -169,7 +172,7 @@ func (c *cursor) readAggregate(aggregateId string, ac chan<- *eventsource.Cursor
 		revision = agg.Snapshot.Revision
 	}
 
-	agg.Events, err = c.s.GetStreamFromRevision(c.ctx, aggregateId, c.aggType, revision)
+	agg.Events, err = c.s.ListEventsFromRevision(c.ctx, aggregateId, c.aggType, revision)
 	if err != nil {
 		ec <- err
 		return

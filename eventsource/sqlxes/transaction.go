@@ -5,16 +5,34 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kucjac/cleango/cgerrors"
+	"github.com/kucjac/cleango/eventsource"
 )
 
-// Transaction is the
+// Compile time check if Transaction implements eventsource.Storage.
+var _ eventsource.Storage = (*Transaction)(nil)
+
+// Transaction is the implementation of the
 type Transaction struct {
 	id string
 	storage
 	done bool
 }
 
-func (t *Transaction) Conn() (*sqlx.Tx, error) {
+// As sets the destination with the *sqlx.Tx implementation.
+func (t *Transaction) As(dst interface{}) error {
+	tx, err := t.txConn()
+	if err != nil {
+		return err
+	}
+	txx, ok := dst.(**sqlx.Tx)
+	if !ok {
+		return cgerrors.ErrInternalf("provided invalid input type: %T, wanted: **sqlx.Tx", dst)
+	}
+	*txx = tx
+	return nil
+}
+
+func (t *Transaction) txConn() (*sqlx.Tx, error) {
 	tx, ok := t.conn.(*sqlx.Tx)
 	if !ok {
 		return nil, cgerrors.ErrInternalf("unknown type of sqlx based eventsource transaction conn: %T", t.conn)
@@ -27,7 +45,7 @@ func (t *Transaction) Commit() error {
 	if t.done {
 		return cgerrors.ErrInternalf("transaction '%s' is already done", t.id)
 	}
-	tx, err := t.Conn()
+	tx, err := t.txConn()
 	if err != nil {
 		return err
 	}

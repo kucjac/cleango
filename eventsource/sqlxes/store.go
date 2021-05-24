@@ -8,12 +8,13 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kucjac/cleango/xservice"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/eventsource"
 )
 
-var _ eventsource.Storage = (*storage)(nil)
+var _ eventsource.Storage = (*Storage)(nil)
 
 // Config is the configuration for the event storage.
 type Config struct {
@@ -92,8 +93,34 @@ func New(conn *sqlx.DB, cfg *Config, d xservice.Driver) (*Storage, error) {
 	return &Storage{storage: storage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), d: d}}, nil
 }
 
+// Storage is the implementation of the eventsource.Storage interface for the sqlx driver.
 type Storage struct {
 	storage
+}
+
+// BeginTx creates and begins a new transaction, which exposes *sqlx.Tx and allows atomic commits.
+func (s *Storage) BeginTx(ctx context.Context) (*Transaction, error) {
+	tx, _, err := s.getTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st := s.storage
+	st.conn = tx
+	return &Transaction{id: uuid.NewV4().String(), storage: st}, nil
+}
+
+// As exposes driver specific implementation.
+func (s *Storage) As(dst interface{}) error {
+	db, ok := s.conn.(*sqlx.DB)
+	if !ok {
+		return cgerrors.ErrInternalf("invalid sqlxes.Storage conn type: %T", s.conn)
+	}
+	ddb, ok := dst.(**sqlx.DB)
+	if !ok {
+		return cgerrors.ErrInternalf("invalid input type: %T, wanted **sqlx.DB", dst)
+	}
+	*ddb = db
+	return nil
 }
 
 type storage struct {
@@ -107,6 +134,18 @@ type storage struct {
 // NewCursor creates a new cursor.
 func (s *storage) NewCursor(ctx context.Context, aggType string, aggVersion int64) (eventsource.Cursor, error) {
 	return s.newCursor(ctx, aggType, aggVersion), nil
+}
+
+// Err handles error message with given driver.
+func (s *storage) Err(err error) error {
+	c := s.d.ErrorCode(err)
+	if c == cgerrors.ErrorCode_AlreadyExists {
+		return cgerrors.ErrAlreadyExists("event revision already exists")
+	}
+	if cgerrors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return cgerrors.New("", err.Error(), c)
 }
 
 // SaveEvents stores provided events in the database.
@@ -207,44 +246,9 @@ func (s *storage) SaveEvents(ctx context.Context, es []*eventsource.Event) error
 	}
 }
 
-// Err handles error message with given driver.
-func (s *storage) Err(err error) error {
-	c := s.d.ErrorCode(err)
-	if c == cgerrors.ErrorCode_AlreadyExists {
-		return cgerrors.ErrAlreadyExists("event revision already exists")
-	}
-	if cgerrors.Is(err, context.DeadlineExceeded) {
-		return err
-	}
-	return cgerrors.New("", err.Error(), c)
-}
-
-func (s *storage) getTx(ctx context.Context) (tx *sqlx.Tx, began bool, err error) {
-	switch db := s.conn.(type) {
-	case *sqlx.Tx:
-		tx = db
-		began = true
-	case *sqlx.DB:
-		for i := 1; i <= s.maxRetries; i++ {
-			tx, err = db.BeginTxx(ctx, nil)
-			if err != nil {
-				if s.d.CanRetry(err) {
-					continue
-				}
-				return nil, false, err
-			}
-			break
-		}
-		return nil, false, err
-	default:
-		return nil, false, cgerrors.ErrInternalf("undefined connection type: %T", s.conn)
-	}
-	return tx, began, nil
-}
-
-// GetEventStream gets the event stream for provided aggregate.
+// ListEvents gets the event stream for provided aggregate.
 // Implements eventsource.Storage interface.
-func (s *storage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
+func (s *storage) ListEvents(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
 	var rows *sqlx.Rows
 	err := s.try(ctx, s.conn, func(ctx context.Context, db sqlx.ExtContext) error {
 		var err error
@@ -326,8 +330,8 @@ func (s *storage) GetSnapshot(ctx context.Context, aggId string, aggType string,
 	return &snap, nil
 }
 
-// GetStreamFromRevision gets the event stream for given aggregate where the revision is subsequent from provided.
-func (s *storage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
+// ListEventsFromRevision gets the event stream for given aggregate where the revision is subsequent from provided.
+func (s *storage) ListEventsFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getStreamFromRevision, aggId, aggType, from)
 	if err != nil {
 		return nil, cgerrors.ErrInternal(err.Error())
@@ -355,6 +359,8 @@ func (s *storage) GetStreamFromRevision(ctx context.Context, aggId string, aggTy
 	return stream, nil
 }
 
+// StreamEvents opens the channel of the events stream that matches given request.
+// Implements eventsource.Storage.
 func (s *storage) StreamEvents(ctx context.Context, req *eventsource.StreamEventsRequest) (<-chan *eventsource.Event, error) {
 	c := s.newStreamCursor(ctx, req)
 	return c.openChannel()
@@ -386,4 +392,26 @@ func (s *storage) tryTx(ctx context.Context, tx *sqlx.Tx, fn func(ctx context.Co
 		break
 	}
 	return err
+}
+
+func (s *storage) getTx(ctx context.Context) (tx *sqlx.Tx, began bool, err error) {
+	switch db := s.conn.(type) {
+	case *sqlx.Tx:
+		tx = db
+		began = true
+	case *sqlx.DB:
+		for i := 1; i <= s.maxRetries; i++ {
+			tx, err = db.BeginTxx(ctx, nil)
+			if err != nil {
+				if s.d.CanRetry(err) {
+					continue
+				}
+				return nil, false, err
+			}
+			break
+		}
+	default:
+		return nil, false, cgerrors.ErrInternalf("undefined connection type: %T", s.conn)
+	}
+	return tx, began, nil
 }
