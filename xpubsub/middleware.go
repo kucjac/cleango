@@ -194,5 +194,3 @@ func GetMessageID(ctx context.Context) string {
 	}
 	return ""
 }
-
-

@@ -18,7 +18,7 @@ type cursor struct {
 	ctx          context.Context
 	cancelFunc   context.CancelFunc
 	l            sync.Mutex
-	conn         *sqlx.DB
+	conn         sqlx.ExtContext
 	s            *storage
 	driver       xservice.Driver
 	aggType      string

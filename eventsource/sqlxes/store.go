@@ -237,7 +237,7 @@ func (s *storage) getTx(ctx context.Context) (tx *sqlx.Tx, began bool, err error
 		}
 		return nil, false, err
 	default:
-		return nil, false, cgerrors.ErrInternal("undefined connection type: %T", s.conn)
+		return nil, false, cgerrors.ErrInternalf("undefined connection type: %T", s.conn)
 	}
 	return tx, began, nil
 }

@@ -15,7 +15,7 @@ type streamEventsCursor struct {
 	ctx         context.Context
 	cancelFunc  context.CancelFunc
 	l           sync.Mutex
-	conn        *sqlx.DB
+	conn        sqlx.ExtContext
 	s           *storage
 	driver      xservice.Driver
 	req         *eventsource.StreamEventsRequest

@@ -74,7 +74,6 @@ func (s *Service) Error() error {
 	return s.err
 }
 
-
 // Close closes all connection within provided context.
 func (s *Service) Close(ctx context.Context) error {
 	xlog.Infof("Closing Service '%s' and its runners...", s.name)
@@ -150,7 +149,6 @@ func (s *Service) serve(ctx context.Context) error {
 	return nil
 }
 
-
 func (s *Service) run() error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancelFunc()
@@ -184,8 +182,6 @@ func (s *Service) run() error {
 	}
 	return nil
 }
-
-
 
 func (s *Service) closeJobsCreator(ctx context.Context, wg *sync.WaitGroup) <-chan Closer {
 	out := make(chan Closer)
