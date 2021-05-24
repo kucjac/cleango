@@ -6,5 +6,3 @@ require (
 	github.com/kucjac/cleango v0.0.8
 	gorm.io/gorm v1.21.10
 )
-
-replace github.com/kucjac/cleango => ../../
