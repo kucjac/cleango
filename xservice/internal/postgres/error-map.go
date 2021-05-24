@@ -1,10 +1,11 @@
-package xpg
+package postgres
 
 import (
 	"github.com/kucjac/cleango/cgerrors"
 )
 
-var errorMap = map[string]cgerrors.ErrorCode{
+// ErrorMap is the postgres error mapping.
+var ErrorMap = map[string]cgerrors.ErrorCode{
 	// Class 02 - No data
 	"02":    cgerrors.ErrorCode_NotFound,
 	"P0002": cgerrors.ErrorCode_NotFound,

@@ -18,8 +18,8 @@ type cursor struct {
 	ctx          context.Context
 	cancelFunc   context.CancelFunc
 	l            sync.Mutex
-	conn         *sqlx.DB
-	s            *sqlStorage
+	conn         sqlx.ExtContext
+	s            *storage
 	driver       xservice.Driver
 	aggType      string
 	aggVersion   int64
@@ -30,7 +30,7 @@ type cursor struct {
 	workers      chan struct{}
 }
 
-func (s *sqlStorage) newCursor(ctx context.Context, aggType string, aggVersion int64) eventsource.Cursor {
+func (s *storage) newCursor(ctx context.Context, aggType string, aggVersion int64) eventsource.Cursor {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return &cursor{
 		ctx:          ctx,

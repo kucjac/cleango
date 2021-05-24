@@ -13,7 +13,7 @@ import (
 	"github.com/kucjac/cleango/eventsource"
 )
 
-var _ eventsource.Storage = (*sqlStorage)(nil)
+var _ eventsource.Storage = (*storage)(nil)
 
 // Config is the configuration for the event storage.
 type Config struct {
@@ -79,7 +79,7 @@ func (c *Config) aggregateTableName() string {
 }
 
 // New creates a new event storage based on provided sqlx connection.
-func New(conn *sqlx.DB, cfg *Config, d xservice.Driver) (eventsource.Storage, error) {
+func New(conn *sqlx.DB, cfg *Config, d xservice.Driver) (*Storage, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -89,24 +89,29 @@ func New(conn *sqlx.DB, cfg *Config, d xservice.Driver) (eventsource.Storage, er
 	if cfg.WorkersCount == 0 {
 		cfg.WorkersCount = 10
 	}
-	return &sqlStorage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), d: d}, nil
+	return &Storage{storage: storage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), d: d}}, nil
 }
 
-type sqlStorage struct {
-	conn       *sqlx.DB
+type Storage struct {
+	storage
+}
+
+type storage struct {
+	conn       sqlx.ExtContext
 	cfg        *Config
 	query      queries
 	d          xservice.Driver
 	maxRetries int
 }
 
-func (s *sqlStorage) NewCursor(ctx context.Context, aggType string, aggVersion int64) (eventsource.Cursor, error) {
+// NewCursor creates a new cursor.
+func (s *storage) NewCursor(ctx context.Context, aggType string, aggVersion int64) (eventsource.Cursor, error) {
 	return s.newCursor(ctx, aggType, aggVersion), nil
 }
 
 // SaveEvents stores provided events in the database.
 // Implements eventsource.Storage interface.
-func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) error {
+func (s *storage) SaveEvents(ctx context.Context, es []*eventsource.Event) error {
 	var (
 		query  string
 		values []interface{}
@@ -168,18 +173,18 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 		}
 
 		// Begin transaction.
-		var tx *sqlx.Tx
-		err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
-			var err error
-			tx, err = db.BeginTxx(ctx, nil)
-			return err
-		})
+		tx, began, err := s.getTx(ctx)
 		if err != nil {
-			c := s.d.ErrorCode(err)
-			if cgerrors.Is(err, context.DeadlineExceeded) {
-				return err
-			}
-			return cgerrors.New("", err.Error(), c)
+			return err
+		}
+		if began {
+			defer func() {
+				if err == nil {
+					tx.Commit()
+				} else {
+					tx.Rollback()
+				}
+			}()
 		}
 
 		// Execute the query.
@@ -188,15 +193,7 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 			return err
 		})
 		if err != nil {
-			c := s.d.ErrorCode(err)
-			if c == cgerrors.ErrorCode_AlreadyExists {
-				return cgerrors.ErrAlreadyExists("event revision already exists")
-			}
-			tx.Rollback()
-			if cgerrors.Is(err, context.DeadlineExceeded) {
-				return err
-			}
-			return cgerrors.New("", err.Error(), c)
+			return s.Err(err)
 		}
 
 		// Commit changes.
@@ -204,26 +201,52 @@ func (s *sqlStorage) SaveEvents(ctx context.Context, es []*eventsource.Event) er
 			return tx.Commit()
 		})
 		if err != nil {
-			// Rollback the transaction.
-			tx.Rollback()
-			c := s.d.ErrorCode(err)
-			if c == cgerrors.ErrorCode_AlreadyExists {
-				return cgerrors.ErrAlreadyExists("event revision already exists")
-			}
-			if cgerrors.Is(err, context.DeadlineExceeded) {
-				return err
-			}
-			return cgerrors.New("", err.Error(), c)
+			s.Err(err)
 		}
 		return nil
 	}
 }
 
+// Err handles error message with given driver.
+func (s *storage) Err(err error) error {
+	c := s.d.ErrorCode(err)
+	if c == cgerrors.ErrorCode_AlreadyExists {
+		return cgerrors.ErrAlreadyExists("event revision already exists")
+	}
+	if cgerrors.Is(err, context.DeadlineExceeded) {
+		return err
+	}
+	return cgerrors.New("", err.Error(), c)
+}
+
+func (s *storage) getTx(ctx context.Context) (tx *sqlx.Tx, began bool, err error) {
+	switch db := s.conn.(type) {
+	case *sqlx.Tx:
+		tx = db
+		began = true
+	case *sqlx.DB:
+		for i := 1; i <= s.maxRetries; i++ {
+			tx, err = db.BeginTxx(ctx, nil)
+			if err != nil {
+				if s.d.CanRetry(err) {
+					continue
+				}
+				return nil, false, err
+			}
+			break
+		}
+		return nil, false, err
+	default:
+		return nil, false, cgerrors.ErrInternalf("undefined connection type: %T", s.conn)
+	}
+	return tx, began, nil
+}
+
 // GetEventStream gets the event stream for provided aggregate.
 // Implements eventsource.Storage interface.
-func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
+func (s *storage) GetEventStream(ctx context.Context, aggId, aggType string) ([]*eventsource.Event, error) {
 	var rows *sqlx.Rows
-	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+	err := s.try(ctx, s.conn, func(ctx context.Context, db sqlx.ExtContext) error {
 		var err error
 		rows, err = db.QueryxContext(ctx, s.query.getEventStream, aggId, aggType)
 		return err
@@ -256,9 +279,9 @@ func (s *sqlStorage) GetEventStream(ctx context.Context, aggId, aggType string) 
 
 // SaveSnapshot stores the snapshot in the database.
 // Implements eventsource.Storage interface.
-func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapshot) error {
+func (s *storage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapshot) error {
 	// aggregate_id, aggregate_type, aggregate_version, revision, timestamp, snapshot_data
-	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+	err := s.try(ctx, s.conn, func(ctx context.Context, db sqlx.ExtContext) error {
 		_, err := s.conn.ExecContext(ctx, s.query.saveSnapshot, snap.AggregateId, snap.AggregateType, snap.AggregateVersion, snap.Revision, snap.Timestamp, snap.SnapshotData)
 		return err
 	})
@@ -277,10 +300,10 @@ func (s *sqlStorage) SaveSnapshot(ctx context.Context, snap *eventsource.Snapsho
 
 // GetSnapshot gets the latest snapshot for given aggregate.
 // Implements eventsource.Storage interface.
-func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*eventsource.Snapshot, error) {
+func (s *storage) GetSnapshot(ctx context.Context, aggId string, aggType string, aggVersion int64) (*eventsource.Snapshot, error) {
 	// aggregate_id = ? AND aggregate_type = ? AND aggregate_version = ?
 	var row *sqlx.Row
-	err := s.try(ctx, s.conn, func(ctx context.Context, db *sqlx.DB) error {
+	err := s.try(ctx, s.conn, func(ctx context.Context, db sqlx.ExtContext) error {
 		row = db.QueryRowxContext(ctx, s.query.getSnapshot, aggId, aggType, aggVersion)
 		return row.Err()
 	})
@@ -304,7 +327,7 @@ func (s *sqlStorage) GetSnapshot(ctx context.Context, aggId string, aggType stri
 }
 
 // GetStreamFromRevision gets the event stream for given aggregate where the revision is subsequent from provided.
-func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
+func (s *storage) GetStreamFromRevision(ctx context.Context, aggId string, aggType string, from int64) ([]*eventsource.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getStreamFromRevision, aggId, aggType, from)
 	if err != nil {
 		return nil, cgerrors.ErrInternal(err.Error())
@@ -332,31 +355,33 @@ func (s *sqlStorage) GetStreamFromRevision(ctx context.Context, aggId string, ag
 	return stream, nil
 }
 
-func (s *sqlStorage) StreamEvents(ctx context.Context, req *eventsource.StreamEventsRequest) (<-chan *eventsource.Event, error) {
+func (s *storage) StreamEvents(ctx context.Context, req *eventsource.StreamEventsRequest) (<-chan *eventsource.Event, error) {
 	c := s.newStreamCursor(ctx, req)
 	return c.openChannel()
 }
 
-func (s *sqlStorage) try(ctx context.Context, db *sqlx.DB, fn func(context.Context, *sqlx.DB) error) error {
+func (s *storage) try(ctx context.Context, db sqlx.ExtContext, fn func(context.Context, sqlx.ExtContext) error) error {
 	var err error
 	for i := 1; i <= s.maxRetries; i++ {
 		if err = fn(ctx, db); err != nil {
 			if s.d.CanRetry(err) {
 				continue
 			}
+			return err
 		}
 		break
 	}
 	return err
 }
 
-func (s *sqlStorage) tryTx(ctx context.Context, tx *sqlx.Tx, fn func(ctx context.Context, tx *sqlx.Tx) error) error {
+func (s *storage) tryTx(ctx context.Context, tx *sqlx.Tx, fn func(ctx context.Context, tx *sqlx.Tx) error) error {
 	var err error
 	for i := 1; i <= s.maxRetries; i++ {
 		if err = fn(ctx, tx); err != nil {
 			if s.d.CanRetry(err) {
 				continue
 			}
+			return err
 		}
 		break
 	}
