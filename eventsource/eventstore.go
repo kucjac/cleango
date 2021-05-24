@@ -22,6 +22,7 @@ type EventStore interface {
 	StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error)
 }
 
+// StreamEventsRequest is a request for the stream events query.
 type StreamEventsRequest struct {
 	AggregateTypes    []string
 	AggregateIDs      []string
@@ -31,28 +32,35 @@ type StreamEventsRequest struct {
 }
 
 // New creates new EventStore implementation.
-func New(cfg *Config, storage Storage) (EventStore, error) {
+func New(cfg *Config, eventCodec EventCodec, snapCodec SnapshotCodec, storage Storage) (*Store, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
-	return &eventStore{
-		aggBaseSetter: newAggregateBaseSetter(cfg.EventCodec, cfg.SnapshotCodec, UUIDGenerator{}),
-		snapCodec:     cfg.SnapshotCodec,
+	return &Store{
+		aggBaseSetter: newAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
+		snapCodec:     snapCodec,
 		storage:       storage,
 		bufferSize:    cfg.BufferSize,
 	}, nil
 }
 
-type eventStore struct {
+// Store is the default implementation for the EventStore interface.
+type Store struct {
 	*aggBaseSetter
 	snapCodec  codec.Codec
 	storage    Storage
 	bufferSize int
 }
 
+// WithStorage creates a copy of the Store structure that has a different storage.
+// This function could be used to create transaction implementations.
+func (e *Store) WithStorage(storage Storage) *Store {
+	return &Store{aggBaseSetter: e.aggBaseSetter, snapCodec: e.snapCodec, bufferSize: e.bufferSize, storage: storage}
+}
+
 // LoadEventStream gets the event stream and applies on provided aggregate.
-func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
+func (e *Store) LoadEventStream(ctx context.Context, agg Aggregate) error {
 	b := agg.AggBase()
 	// Get the full event stream for given aggregate.
 	events, err := e.storage.GetEventStream(ctx, b.id, b.aggType)
@@ -77,7 +85,7 @@ func (e *eventStore) LoadEventStream(ctx context.Context, agg Aggregate) error {
 }
 
 // LoadEventStreamWithSnapshot gets the aggregate stream with the latest possible snapshot.
-func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
+func (e *Store) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggregate) error {
 	// At first try to get the snapshot for given aggregate.
 	b := agg.AggBase()
 	snap, err := e.storage.GetSnapshot(ctx, b.id, b.aggType, b.version)
@@ -123,7 +131,7 @@ func (e *eventStore) LoadEventStreamWithSnapshot(ctx context.Context, agg Aggreg
 }
 
 // SaveSnapshot stores the snapshot
-func (e *eventStore) SaveSnapshot(ctx context.Context, agg Aggregate) error {
+func (e *Store) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 	// Create a snapshot and store it in the storage.
 	data, err := e.snapCodec.Marshal(agg)
 	if err != nil {
@@ -145,7 +153,7 @@ func (e *eventStore) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 }
 
 // Commit commits provided aggregate events. In case when the
-func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
+func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 	b := agg.AggBase()
 	events := b.uncommittedEvents
 	for {
@@ -182,7 +190,7 @@ func (e *eventStore) Commit(ctx context.Context, agg Aggregate) error {
 // StreamAggregates opens up the aggregate streaming channel. The channel would got closed when there is no more aggregate to read
 // or when the context is done.
 // Closing resulting channel would result with a panic.
-func (e *eventStore) StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error) {
+func (e *Store) StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error) {
 	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
 	if err != nil {
 		return nil, err
@@ -192,7 +200,7 @@ func (e *eventStore) StreamAggregates(ctx context.Context, aggType string, aggVe
 	return l.readAggregateChannel()
 }
 
-func (e *eventStore) StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error) {
+func (e *Store) StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error) {
 	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
 	if err != nil {
 		return nil, err
@@ -202,6 +210,6 @@ func (e *eventStore) StreamProjections(ctx context.Context, aggType string, aggV
 	return l.readProjectionChannel()
 }
 
-func (e *eventStore) StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error) {
+func (e *Store) StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error) {
 	return e.storage.StreamEvents(ctx, req)
 }

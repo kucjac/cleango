@@ -16,7 +16,7 @@ type streamEventsCursor struct {
 	cancelFunc  context.CancelFunc
 	l           sync.Mutex
 	conn        *sqlx.DB
-	s           *sqlStorage
+	s           *storage
 	driver      xservice.Driver
 	req         *eventsource.StreamEventsRequest
 	lastTakenID uint64
@@ -24,7 +24,7 @@ type streamEventsCursor struct {
 	limit       int64
 }
 
-func (s *sqlStorage) newStreamCursor(ctx context.Context, req *eventsource.StreamEventsRequest) *streamEventsCursor {
+func (s *storage) newStreamCursor(ctx context.Context, req *eventsource.StreamEventsRequest) *streamEventsCursor {
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return &streamEventsCursor{
 		ctx:        ctx,

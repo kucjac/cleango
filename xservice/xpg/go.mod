@@ -7,3 +7,5 @@ require (
 	github.com/kucjac/cleango v0.0.0-20210511125453-41e163533663	
 	github.com/stretchr/testify v1.7.0
 )
+
+replace github.com/kucjac/cleango => ./../../
