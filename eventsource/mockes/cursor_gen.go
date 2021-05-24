@@ -34,17 +34,17 @@ func (m *MockCursor) EXPECT() *MockCursorMockRecorder {
 	return m.recorder
 }
 
-// OpenChannel mocks base method.
-func (m *MockCursor) OpenChannel(arg0 bool) (<-chan *eventsource.CursorAggregate, error) {
+// GetAggregateStream mocks base method.
+func (m *MockCursor) GetAggregateStream(arg0 bool) (<-chan *eventsource.CursorAggregate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OpenChannel", arg0)
+	ret := m.ctrl.Call(m, "GetAggregateStream", arg0)
 	ret0, _ := ret[0].(<-chan *eventsource.CursorAggregate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// OpenChannel indicates an expected call of OpenChannel.
-func (mr *MockCursorMockRecorder) OpenChannel(arg0 interface{}) *gomock.Call {
+// GetAggregateStream indicates an expected call of GetAggregateStream.
+func (mr *MockCursorMockRecorder) GetAggregateStream(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenChannel", reflect.TypeOf((*MockCursor)(nil).OpenChannel), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregateStream", reflect.TypeOf((*MockCursor)(nil).GetAggregateStream), arg0)
 }

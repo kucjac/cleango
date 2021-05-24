@@ -35,7 +35,7 @@ func newAggregateLoader(c Cursor, aggType string, aggVersion int64, factory Aggr
 }
 
 func (l *aggregateLoader) readAggregateChannel() (<-chan Aggregate, error) {
-	r, err := l.c.OpenChannel(true)
+	r, err := l.c.GetAggregateStream(true)
 	if err != nil {
 		return nil, err
 	}

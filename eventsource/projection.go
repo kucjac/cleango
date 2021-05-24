@@ -38,7 +38,7 @@ func newProjectionLoader(cd codec.Codec, c Cursor, aggType string, aggVersion in
 }
 
 func (l *projectionLoader) readProjectionChannel() (<-chan Projection, error) {
-	r, err := l.c.OpenChannel(false)
+	r, err := l.c.GetAggregateStream(false)
 	if err != nil {
 		return nil, err
 	}
