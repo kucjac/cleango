@@ -38,12 +38,21 @@ type Generator interface {
 	NextId() string
 }
 
-type generator int
+type prefixGenerator int
 
 // NextId implements Generator interface.
-func (g generator) NextId() string {
+func (g prefixGenerator) NextId() string {
 	thisID := atomic.AddUint64(&generators[g], 1)
 	return fmt.Sprintf("%s-%s-%06d", prefix, contexts[g], thisID)
+}
+
+func NextNoPrefixGenerator(name string) Generator {
+	l.Lock()
+	defer l.Unlock()
+	gen := len(generators)
+	generators = append(generators, 0)
+	contexts = append(contexts, name)
+	return simpleGenerator(gen)
 }
 
 // NextGenerator gets the next generator with given package name context.
@@ -53,5 +62,13 @@ func NextGenerator(name string) Generator {
 	gen := len(generators)
 	generators = append(generators, 0)
 	contexts = append(contexts, name)
-	return generator(gen)
+	return prefixGenerator(gen)
+}
+
+type simpleGenerator int
+
+// NextId implements Generator interface.
+func (g simpleGenerator) NextId() string {
+	thisID := atomic.AddUint64(&generators[g], 1)
+	return fmt.Sprintf("%s-%06d", contexts[g], thisID)
 }

@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
+	"github.com/kucjac/cleango/internal/uniqueid"
 	"github.com/kucjac/cleango/xlog"
 	"github.com/kucjac/cleango/xservice"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"gocloud.dev/pubsub"
 )
@@ -36,11 +36,12 @@ type Mux struct {
 	cf          context.CancelFunc
 	subscribers []subscriber
 	running     bool
+	gen         uniqueid.Generator
 }
 
 // NewMux creates a new mux that will register subscriptions using provided subscriber factory.
 func NewMux() *Mux {
-	return &Mux{ctx: context.Background(), maxHandlers: 10}
+	return &Mux{ctx: context.Background(), maxHandlers: 10, gen: uniqueid.NextGenerator("pubsub:mux")}
 }
 
 // Run starts the router and begin on listening for given subscriptions.
@@ -56,6 +57,10 @@ func (m *Mux) Run() error {
 
 	m.ctx, m.cf = context.WithCancel(context.Background())
 	if err := m.listenOnRoutes(); err != nil {
+		m.cf()
+		return err
+	}
+	if err := m.listenOnSubscriptions(); err != nil {
 		m.cf()
 		return err
 	}
@@ -141,11 +146,11 @@ func (m *Mux) Subscription(sub *pubsub.Subscription, hf HandlerFunc, topic ...st
 
 func (m *Mux) close(ctx context.Context) error {
 	for _, s := range m.subscribers {
-		fields := logrus.Fields{
-			"id":    s.id,
-			"topic": s.topic,
+		fields := logrus.Fields{"id": s.id}
+		if s.topic != "" {
+			fields["topic"] = s.topic
 		}
-		xlog.WithFields(fields).Infof("Closing subscription: %s", s.topic)
+		xlog.WithFields(fields).Info("Closing subscription")
 		if err := s.sub.Shutdown(ctx); err != nil {
 			return err
 		}
@@ -165,7 +170,7 @@ func (m *Mux) listenOnRoutes() error {
 		sb := subscriber{
 			sub:   sub,
 			topic: r.topic,
-			id:    uuid.NewV4().String(),
+			id:    m.gen.NextId(),
 		}
 
 		// Provide log fields for given subscription.
@@ -174,7 +179,7 @@ func (m *Mux) listenOnRoutes() error {
 			"id":    sb.id,
 		}
 
-		xlog.WithFields(logFields).Infof("listening at the topic: %s", r.topic)
+		xlog.WithFields(logFields).Infof("listening for subscription")
 		m.subscribers = append(m.subscribers, sb)
 
 		go m.listenOnSubscriber(sub, sb.id, r.topic, r.maxHandlers, r.middlewares.Handler(r.h))
@@ -192,7 +197,7 @@ func (m *Mux) listenOnSubscriptions() error {
 		// Create a subscription with it's unique id.
 		sb := subscriber{
 			sub:   r.sub,
-			id:    uuid.NewV4().String(),
+			id:    m.gen.NextId(),
 			topic: r.topic,
 		}
 		// Provide log fields for given subscription.
@@ -203,7 +208,7 @@ func (m *Mux) listenOnSubscriptions() error {
 			logFields["topic"] = r.topic
 		}
 
-		xlog.WithFields(logFields).Infof("listening at the subscription: %s", sb.id)
+		xlog.WithFields(logFields).Info("listening for subscription")
 		m.subscribers = append(m.subscribers, sb)
 
 		go m.listenOnSubscriber(r.sub, sb.id, sb.topic, r.maxHandlers, r.middlewares.Handler(r.h))
