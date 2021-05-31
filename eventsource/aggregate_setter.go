@@ -4,22 +4,23 @@ import (
 	"github.com/kucjac/cleango/codec"
 )
 
-// newAggregateBaseSetter creates new aggregate setter.
-func newAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator) *aggBaseSetter {
-	return &aggBaseSetter{
+// NewAggregateBaseSetter creates new aggregate setter.
+func NewAggregateBaseSetter(eventCodec, snapCodec codec.Codec, idGen IdGenerator) *AggregateBaseSetter {
+	return &AggregateBaseSetter{
 		eventCodec: eventCodec,
 		snapCodec:  snapCodec,
 		idGen:      idGen,
 	}
 }
 
-type aggBaseSetter struct {
+// AggregateBaseSetter is a structure responsible for setting the aggregate base.
+type AggregateBaseSetter struct {
 	eventCodec, snapCodec codec.Codec
 	idGen                 IdGenerator
 }
 
 // SetAggregateBase implements AggregateBaseSetter interface.
-func (a *aggBaseSetter) SetAggregateBase(agg Aggregate, aggId, aggType string, version int64) {
+func (a *AggregateBaseSetter) SetAggregateBase(agg Aggregate, aggId, aggType string, version int64) {
 	base := &AggregateBase{
 		id:         aggId,
 		aggType:    aggType,

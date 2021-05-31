@@ -7,6 +7,7 @@ import (
 	"github.com/kucjac/cleango/xlog"
 )
 
+// AggregateFactory is a factory interface used to create new Aggregate models.
 type AggregateFactory interface {
 	New(aggType string, aggVersion int64) Aggregate
 }

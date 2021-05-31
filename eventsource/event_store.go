@@ -9,7 +9,7 @@ import (
 )
 
 // Generate the mock store.
-//go:generate mockgen -destination=mock.go -package=eventsource . Store
+//go:generate mockgen -destination=mock.go -package=eventsource . EventStore
 
 // EventStore is an interface used by the event store to load, commit and create snapshot on aggregates.
 type EventStore interface {
@@ -54,16 +54,16 @@ func New(cfg *Config, eventCodec EventCodec, snapCodec SnapshotCodec, storage St
 	}
 
 	return &Store{
-		aggBaseSetter: newAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
-		snapCodec:     snapCodec,
-		storage:       storage,
-		bufferSize:    cfg.BufferSize,
+		AggregateBaseSetter: NewAggregateBaseSetter(eventCodec, snapCodec, UUIDGenerator{}),
+		snapCodec:           snapCodec,
+		storage:             storage,
+		bufferSize:          cfg.BufferSize,
 	}, nil
 }
 
 // Store is the default implementation for the EventStore interface.
 type Store struct {
-	*aggBaseSetter
+	*AggregateBaseSetter
 	snapCodec  codec.Codec
 	storage    Storage
 	bufferSize int
@@ -72,7 +72,7 @@ type Store struct {
 // CopyWithStorage creates a copy of the Store structure that has a different storage.
 // This function could be used to create transaction implementations.
 func (e *Store) CopyWithStorage(storage Storage) *Store {
-	return &Store{aggBaseSetter: e.aggBaseSetter, snapCodec: e.snapCodec, bufferSize: e.bufferSize, storage: storage}
+	return &Store{AggregateBaseSetter: e.AggregateBaseSetter, snapCodec: e.snapCodec, bufferSize: e.bufferSize, storage: storage}
 }
 
 // LoadEvents gets the event stream and applies on provided aggregate.

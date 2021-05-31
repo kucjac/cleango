@@ -32,6 +32,11 @@ func (t *Transaction) As(dst interface{}) error {
 	return nil
 }
 
+// Done checks if the transaction is already done.
+func (t *Transaction) Done() bool {
+	return t.done
+}
+
 func (t *Transaction) txConn() (*sqlx.Tx, error) {
 	tx, ok := t.conn.(*sqlx.Tx)
 	if !ok {
@@ -51,6 +56,25 @@ func (t *Transaction) Commit() error {
 	}
 	err = t.tryTx(context.Background(), tx, func(ctx context.Context, tx *sqlx.Tx) error {
 		return tx.Commit()
+	})
+	if err != nil {
+		return t.Err(err)
+	}
+	t.done = true
+	return nil
+}
+
+// Rollback the transaction.
+func (t *Transaction) Rollback() error {
+	if t.done {
+		return cgerrors.ErrInternalf("transaction '%s' is already done", t.id)
+	}
+	tx, err := t.txConn()
+	if err != nil {
+		return err
+	}
+	err = t.tryTx(context.Background(), tx, func(ctx context.Context, tx *sqlx.Tx) error {
+		return tx.Rollback()
 	})
 	if err != nil {
 		return t.Err(err)
