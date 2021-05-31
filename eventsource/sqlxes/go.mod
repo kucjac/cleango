@@ -7,3 +7,5 @@ require (
 	github.com/kucjac/cleango v0.0.11
 	github.com/satori/go.uuid v1.2.0
 )
+
+replace github.com/kucjac/cleango => ../../
