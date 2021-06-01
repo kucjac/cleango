@@ -113,6 +113,12 @@ func (a *AggregateBase) LatestCommittedEvent() (*Event, bool) {
 	return nil, false
 }
 
+// MarkEventsCommitted marks the aggregate events as committed.
+// NOTE: Use this function carefully, as the event store wouldn't try to commit events, already marked as committed.
+func (a *AggregateBase) MarkEventsCommitted() {
+	a.committedEvents, a.uncommittedEvents = a.uncommittedEvents, nil
+}
+
 // DecodeEventAs decodes provided in put eventData into the structure of eventMsg.
 // THe eventMsg is expected to be a pointer to the event msg.
 func (a *AggregateBase) DecodeEventAs(eventData []byte, eventMsg interface{}) error {

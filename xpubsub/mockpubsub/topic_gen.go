@@ -5,11 +5,11 @@
 package mockpubsub
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
-	"gocloud.dev/pubsub"
+	gomock "github.com/golang/mock/gomock"
+	pubsub "gocloud.dev/pubsub"
 )
 
 // MockTopic is a mock of Topic interface.
