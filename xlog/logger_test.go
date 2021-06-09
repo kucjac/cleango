@@ -11,6 +11,7 @@ import (
 func TestLog(t *testing.T) {
 	buf := new(bytes.Buffer)
 	lx := New()
+	lx.SetFormatter(NewTextFormatter(false))
 	lx.SetOutput(buf)
 	lx.WithField("msg", "helloooo").Print("hello")
 	str := buf.String()

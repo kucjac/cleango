@@ -44,7 +44,7 @@ func (c *Conn) As(in interface{}) error {
 	case **sql.DB:
 		*it = (*sqlx.DB)(c).DB
 	default:
-		return cgerrors.ErrInternal("xsql.Conn.As provided invalid input type: %T", in)
+		return cgerrors.ErrInternalf("xsql.Conn.As provided invalid input type: %T", in)
 	}
 	return nil
 }

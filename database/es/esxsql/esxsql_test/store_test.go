@@ -1,4 +1,4 @@
-package esxsql_test
+package esxsql_tst
 
 import (
 	"bytes"

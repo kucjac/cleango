@@ -11,9 +11,8 @@ require (
 )
 
 replace (
+	github.com/kucjac/cleango => ./../../../../
 	github.com/kucjac/cleango/database/es/esxsql => ./../
 	github.com/kucjac/cleango/database/xpq => ./../../../xpq
 	github.com/kucjac/cleango/database/xsql => ./../../../xsql
-	github.com/kucjac/cleango => ./../../../../
 )
-

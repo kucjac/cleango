@@ -7,7 +7,7 @@ import (
 	"github.com/go-pg/pg/v10"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kucjac/cleango/xservice/xpg"
+	"github.com/kucjac/cleango/database/xpg"
 )
 
 // Conn creates new real connection to database
