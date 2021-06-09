@@ -26,7 +26,7 @@ func (logger *Log) NewEntry() *logrus.Entry {
 func New() *Log {
 	l := logrus.New()
 
-	l.SetFormatter(NewTextFormatter(false))
+	l.SetFormatter(NewTextFormatter(true))
 	l.SetLevel(logrus.TraceLevel)
 	return &Log{Logger: l}
 }

@@ -9,7 +9,7 @@ import (
 	"gocloud.dev/pubsub"
 )
 
-//go:generate mockgen -destination=mockpubsub/topic_gen.go -package=mockpubsub . Topic
+//go:generate mockgen -destination=pubsubmock/topic_gen.go -package=pubsubmock . Topic
 
 // Compile time check if pubsub.Topic implements Topic interface.
 var _ Topic = (*pubsub.Topic)(nil)

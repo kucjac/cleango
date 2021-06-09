@@ -14,6 +14,7 @@ type Handler interface {
 // HandlerFunc is a function used to handle messages.
 type HandlerFunc func(ctx context.Context, m *pubsub.Message) error
 
+// Handle implements Handler interface.
 func (h HandlerFunc) Handle(ctx context.Context, m *pubsub.Message) error {
 	return h(ctx, m)
 }

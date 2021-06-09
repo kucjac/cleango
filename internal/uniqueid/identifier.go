@@ -12,6 +12,7 @@ import (
 
 var (
 	prefix     string
+	rs         string
 	generators []uint64
 	contexts   []string
 	l          sync.Mutex
@@ -30,6 +31,7 @@ func init() {
 		b64 = strings.NewReplacer("+", "", "/", "").Replace(b64)
 	}
 
+	rs = b64[0:10]
 	prefix = fmt.Sprintf("%s/%s", hostname, b64[0:10])
 }
 
@@ -65,10 +67,29 @@ func NextGenerator(name string) Generator {
 	return prefixGenerator(gen)
 }
 
+// NextBaseGenerator creates a new generator that gets the random entries in a format:
+// RANDOM_BYTES-CONTEXT_NAME-CURRENT_ID
+func NextBaseGenerator(name string) Generator {
+	l.Lock()
+	defer l.Unlock()
+	gen := len(generators)
+	generators = append(generators, 0)
+	contexts = append(contexts, name)
+	return baseGenerator(gen)
+}
+
 type simpleGenerator int
 
 // NextId implements Generator interface.
 func (g simpleGenerator) NextId() string {
 	thisID := atomic.AddUint64(&generators[g], 1)
 	return fmt.Sprintf("%s-%06d", contexts[g], thisID)
+}
+
+type baseGenerator int
+
+// NextId implements Generator interface.
+func (r baseGenerator) NextId() string {
+	thisID := atomic.AddUint64(&generators[r], 1)
+	return fmt.Sprintf("%s-%s-%06d", rs, contexts[r], thisID)
 }
