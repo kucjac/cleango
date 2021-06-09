@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kucjac/cleango/database"
 	"github.com/kucjac/cleango/database/es"
 	"github.com/kucjac/cleango/database/xsql"
 	"github.com/kucjac/cleango/xlog"
@@ -17,7 +16,6 @@ type streamEventsCursor struct {
 	l           sync.Mutex
 	conn        xsql.DB
 	s           *storage
-	driver      database.Driver
 	req         *es.StreamEventsRequest
 	lastTakenID uint64
 	query       queries
@@ -31,7 +29,6 @@ func (s *storage) newStreamCursor(ctx context.Context, req *es.StreamEventsReque
 		cancelFunc: cancelFunc,
 		conn:       s.conn,
 		query:      s.query,
-		driver:     s.d,
 		limit:      int64(req.BuffSize),
 		s:          s,
 		req:        req,
@@ -59,7 +56,7 @@ func (c *streamEventsCursor) startReadingEvents(ca chan *es.Event) {
 		var rows *xsql.Rows
 		rows, err = c.conn.QueryContext(c.ctx, q.query, append(q.args, c.lastTakenID, c.limit)...)
 		if err != nil {
-			if c.driver.CanRetry(err) {
+			if c.conn.CanRetry(err) {
 				continue
 			}
 			break

@@ -18,6 +18,11 @@ type PGDriver struct {
 	mp map[string]cgerrors.ErrorCode
 }
 
+// DriverName gets the name of the PGDriver.
+func (p *PGDriver) DriverName() string {
+	return "go-pg"
+}
+
 // NewDriver creates a new driver implementation for the go-pg.
 func NewDriver() *PGDriver {
 	mp := map[string]cgerrors.ErrorCode{}

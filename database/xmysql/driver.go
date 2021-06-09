@@ -12,12 +12,15 @@ import (
 
 var defaultDriver = newDriver()
 
+// Compile time check if the MySQLDriver implements database.Driver interface.
+var _ database.Driver = (*MySQLDriver)(nil)
+
 // NewDriver creates a new error driver.
-func NewDriver() database.Driver {
+func NewDriver() *MySQLDriver {
 	return newDriver()
 }
 
-func newDriver() database.Driver {
+func newDriver() *MySQLDriver {
 	cm := make(map[interface{}]cgerrors.ErrorCode)
 	sm := make(map[uint16]string)
 	for k, v := range mysqlErrMap {
@@ -26,18 +29,25 @@ func newDriver() database.Driver {
 	for k, v := range codeSQLState {
 		sm[k] = v
 	}
-	return &mysqlDriver{
+	return &MySQLDriver{
 		codeMap:  cm,
 		stateMap: sm,
 	}
 }
 
-type mysqlDriver struct {
+// MySQLDriver is the implementation of the MySQL based database.Driver.
+type MySQLDriver struct {
 	codeMap  map[interface{}]cgerrors.ErrorCode
 	stateMap map[uint16]string
 }
 
-func (d *mysqlDriver) CanRetry(err error) bool {
+// DriverName implements database.Driver interface.
+func (m *MySQLDriver) DriverName() string {
+	return "mysql"
+}
+
+// CanRetry implements database.Driver interface.
+func (m *MySQLDriver) CanRetry(err error) bool {
 	switch e := err.(type) {
 	case *mysql.MySQLError:
 		switch e.Number {
@@ -58,7 +68,7 @@ func (d *mysqlDriver) CanRetry(err error) bool {
 }
 
 // ErrorCode implements cgerrors.ErrorCoder interface.
-func (d *mysqlDriver) ErrorCode(err error) cgerrors.ErrorCode {
+func (m *MySQLDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	mySQLErr, ok := err.(*mysql.MySQLError)
 	if !ok {
 		// Otherwise check if it sql.Err* or other errors from mysql package
@@ -74,18 +84,18 @@ func (d *mysqlDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	}
 
 	// Check if Error Number is in recogniser
-	c, ok := d.codeMap[mySQLErr.Number]
+	c, ok := m.codeMap[mySQLErr.Number]
 	if ok {
 		// Return if found
 		return c
 	}
 
 	// Otherwise check if given sqlstate is in the codeMap
-	sqlState, ok := d.stateMap[mySQLErr.Number]
+	sqlState, ok := m.stateMap[mySQLErr.Number]
 	if !ok || len(sqlState) != 5 {
 		return cgerrors.ErrorCode_Unknown
 	}
-	c, ok = d.codeMap[sqlState]
+	c, ok = m.codeMap[sqlState]
 	if ok {
 		return c
 	}
@@ -93,7 +103,7 @@ func (d *mysqlDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	// First two letter from sqlState represents error class
 	// Check if class is in error map
 	sqlStateClass := sqlState[0:2]
-	c, ok = d.codeMap[sqlStateClass]
+	c, ok = m.codeMap[sqlStateClass]
 	if ok {
 		return c
 	}

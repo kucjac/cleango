@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/database"
 	"github.com/kucjac/cleango/database/xsql"
 	"github.com/kucjac/cleango/xlog"
 
@@ -21,7 +20,6 @@ type cursor struct {
 	l            sync.Mutex
 	conn         xsql.DB
 	s            *storage
-	driver       database.Driver
 	aggType      string
 	aggVersion   int64
 	lastTakenID  uint64
@@ -48,7 +46,6 @@ func (s *storage) newCursor(ctx context.Context, aggType string, aggVersion int6
 		aggVersion:   aggVersion,
 		conn:         s.conn,
 		query:        s.query,
-		driver:       s.d,
 		limit:        1000,
 		s:            s,
 		workersCount: s.cfg.WorkersCount,
@@ -75,7 +72,7 @@ func (c *cursor) readAggregates(ca chan *eventsource.CursorAggregate, withSnapsh
 		var rows *xsql.Rows
 		rows, err = c.conn.QueryContext(c.ctx, c.query.listNextAggregates, c.aggType, c.lastTakenID, c.limit)
 		if err != nil {
-			if c.driver.CanRetry(err) {
+			if c.conn.CanRetry(err) {
 				continue
 			}
 			break

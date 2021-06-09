@@ -19,7 +19,7 @@ func testPostgresStore(t *testing.T) *esxsql.Storage {
 	conn := testPostgresConn(t)
 	config := esxsql.DefaultConfig()
 	config.SchemaName = "public"
-	s, err := esxsql.New(conn, config, xpq.NewDriver())
+	s, err := esxsql.New(conn, config)
 	if err != nil {
 		t.Fatalf("creating esxsql storage failed: %v", err)
 	}
@@ -43,7 +43,7 @@ func testPostgresConn(t *testing.T) *xsql.Conn {
 	if uri == "" {
 		t.Skip("no CG_PG_TEST_URI defined...")
 	}
-	conn, err := xsql.Connect("postgres", uri)
+	conn, err := xsql.Connect(xpq.NewDriver(), uri)
 	if err != nil {
 		t.Fatalf("establishing postgres connection failed: %v", err)
 	}

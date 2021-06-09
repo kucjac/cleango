@@ -3,9 +3,7 @@ package esxsql
 import (
 	"context"
 	"database/sql"
-	"strings"
 
-	"github.com/kucjac/cleango/database"
 	"github.com/kucjac/cleango/database/xsql"
 	"github.com/kucjac/cleango/xlog"
 	uuid "github.com/satori/go.uuid"
@@ -16,81 +14,15 @@ import (
 
 var _ es.Storage = (*Storage)(nil)
 
-// Config is the configuration for the event storage.
-type Config struct {
-	EventTable     string
-	SnapshotTable  string
-	SchemaName     string // Optional
-	AggregateTable string
-	WorkersCount   int
-}
-
-// DefaultConfig creates a new default config.
-func DefaultConfig() *Config {
-	return &Config{
-		EventTable:     "event",
-		SnapshotTable:  "snapshot",
-		AggregateTable: "aggregate",
-		WorkersCount:   10,
-	}
-}
-
-// Validate checks if the config is valid to use.
-func (c *Config) Validate() error {
-	if c.EventTable == "" {
-		return cgerrors.ErrInternal("no event table name provided")
-	}
-	if c.SnapshotTable == "" {
-		return cgerrors.ErrInternal("no snapshot table name provided")
-	}
-	if c.AggregateTable == "" {
-		return cgerrors.ErrInternalf("no aggregate table name provided")
-	}
-	return nil
-}
-
-func (c *Config) eventTableName() string {
-	sb := strings.Builder{}
-	if c.SchemaName != "" {
-		sb.WriteString(c.SchemaName)
-		sb.WriteRune('.')
-	}
-	sb.WriteString(c.EventTable)
-	return sb.String()
-}
-
-func (c *Config) snapshotTableName() string {
-	sb := strings.Builder{}
-	if c.SchemaName != "" {
-		sb.WriteString(c.SchemaName)
-		sb.WriteRune('.')
-	}
-	sb.WriteString(c.SnapshotTable)
-	return sb.String()
-}
-
-func (c *Config) aggregateTableName() string {
-	sb := strings.Builder{}
-	if c.SchemaName != "" {
-		sb.WriteString(c.SchemaName)
-		sb.WriteRune('.')
-	}
-	sb.WriteString(c.AggregateTable)
-	return sb.String()
-}
-
 // New creates a new event storage based on provided sqlx connection.
-func New(conn xsql.DB, cfg *Config, d database.Driver) (*Storage, error) {
+func New(conn xsql.DB, cfg *Config) (*Storage, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
-	}
-	if d == nil {
-		return nil, cgerrors.ErrInternal("esxsql driver not defined")
 	}
 	if cfg.WorkersCount == 0 {
 		cfg.WorkersCount = 10
 	}
-	return &Storage{storage: storage{conn: conn, cfg: cfg, query: newQueries(conn, cfg), d: d}}, nil
+	return &Storage{storage: storage{conn: conn, cfg: cfg, query: newQueries(conn, cfg)}}, nil
 }
 
 // Storage is the implementation of the eventsource.Storage interface for the sqlx driver.
@@ -123,15 +55,16 @@ func (s *Storage) As(dst interface{}) error {
 	return nil
 }
 
+// storage is the internal common implementation of the es.Storage for both Storage and Transaction.
 type storage struct {
 	conn  xsql.DB
 	cfg   *Config
 	query queries
-	d     database.Driver
 }
 
+// ErrorCode gets the error code related to given error.
 func (s *storage) ErrorCode(err error) cgerrors.ErrorCode {
-	return s.d.ErrorCode(err)
+	return s.conn.ErrorCode(err)
 }
 
 // NewCursor creates a new cursor.
@@ -141,7 +74,7 @@ func (s *storage) NewCursor(ctx context.Context, aggType string, aggVersion int6
 
 // Err handles error message with given driver.
 func (s *storage) Err(err error) error {
-	c := s.d.ErrorCode(err)
+	c := s.conn.ErrorCode(err)
 	if c == cgerrors.ErrorCode_AlreadyExists {
 		return cgerrors.ErrAlreadyExists("event revision already exists")
 	}
@@ -244,7 +177,7 @@ func (s *storage) SaveEvents(ctx context.Context, es []*es.Event) error {
 func (s *storage) ListEvents(ctx context.Context, aggId, aggType string) ([]*es.Event, error) {
 	rows, err := s.conn.QueryContext(ctx, s.query.getEventStream, aggId, aggType)
 	if err != nil {
-		return nil, cgerrors.New("", err.Error(), s.d.ErrorCode(err))
+		return nil, cgerrors.New("", err.Error(), s.conn.ErrorCode(err))
 	}
 	defer rows.Close()
 
@@ -289,7 +222,7 @@ func (s *storage) GetSnapshot(ctx context.Context, aggId string, aggType string,
 		if cgerrors.Is(err, sql.ErrNoRows) {
 			return nil, cgerrors.ErrNotFound("snapshot not found")
 		}
-		return nil, cgerrors.New("", err.Error(), s.d.ErrorCode(err))
+		return nil, cgerrors.New("", err.Error(), s.conn.ErrorCode(err))
 	}
 	return &snap, nil
 }

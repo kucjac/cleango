@@ -7,8 +7,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kucjac/cleango/cgerrors"
+	"github.com/kucjac/cleango/database"
 	"github.com/kucjac/cleango/xlog"
-	"github.com/sirupsen/logrus"
 )
 
 // RunInTransaction executes given function based on provided 'db' within a transaction.
@@ -26,8 +26,20 @@ func RunInTransaction(ctx context.Context, db DB, fn func(tx *Tx) error) (err er
 
 // Tx is the database connection.
 type Tx struct {
-	id string
-	tx *sqlx.Tx
+	id     string
+	tx     *sqlx.Tx
+	driver database.Driver
+	config *Config
+}
+
+// ErrorCode gets the error code related to given database error.
+func (tx *Tx) ErrorCode(err error) cgerrors.ErrorCode {
+	return tx.driver.ErrorCode(err)
+}
+
+// CanRetry checks if the query done within given transaction could be retried.
+func (tx *Tx) CanRetry(err error) bool {
+	return tx.driver.CanRetry(err)
 }
 
 // RunInTransaction runs a function in the transaction. If function
@@ -89,10 +101,9 @@ func (tx *Tx) Query(query string, args ...interface{}) (*Rows, error) {
 
 // QueryContext queries the database within given transaction and returns an *xsql.Rows. Any placeholder parameters are replaced with supplied args.
 func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*Rows, error) {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(tx.id, query, ts, args...)
-	}
+	ts := time.Now()
+	defer logQuery(tx.id, query, ts, tx.config, args...)
+
 	rows, err := tx.tx.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -107,19 +118,17 @@ func (tx *Tx) QueryRow(query string, args ...interface{}) *Row {
 
 // QueryRowContext queries the database within given transaction and returns an *xsql.Row. Any placeholder parameters are replaced with supplied args.
 func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *Row {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(tx.id, query, ts, args...)
-	}
+	ts := time.Now()
+	defer logQuery(tx.id, query, ts, tx.config, args...)
+
 	return (*Row)(tx.tx.QueryRowxContext(ctx, query, args...))
 }
 
 // ExecContext execute provided query with the input arguments.
 func (tx *Tx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(tx.id, query, ts, args...)
-	}
+	ts := time.Now()
+	defer logQuery(tx.id, query, ts, tx.config, args...)
+
 	return tx.tx.ExecContext(ctx, query, args...)
 }
 
@@ -136,7 +145,7 @@ func (tx *Tx) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newTxStmt(stmt, tx.id, query), nil
+	return newTxStmt(stmt, tx.id, query, tx.config), nil
 }
 
 // Prepare creates a prepared statement.
@@ -146,18 +155,16 @@ func (tx *Tx) Prepare(query string) (*Stmt, error) {
 
 // Commit commits this transaction.
 func (tx *Tx) Commit() error {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(tx.id, "COMMIT", ts)
-	}
+	ts := time.Now()
+	defer logQuery(tx.id, "COMMIT", ts, tx.config)
+
 	return tx.tx.Commit()
 }
 
 // Rollback aborts this transaction.
 func (tx *Tx) Rollback() error {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(tx.id, "ROLLBACK", ts)
-	}
+	ts := time.Now()
+	defer logQuery(tx.id, "ROLLBACK", ts, tx.config)
+
 	return tx.tx.Rollback()
 }

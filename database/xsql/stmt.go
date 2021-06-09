@@ -13,9 +13,10 @@ import (
 
 // Stmt is the xsql type wrapper for the sqlx.Stmt.
 type Stmt struct {
-	stmt  *sqlx.Stmt
-	txID  string
-	query string
+	stmt   *sqlx.Stmt
+	txID   string
+	query  string
+	config *Config
 }
 
 // As extracts direct implementation of the stmt in the *sqlx.Stmt or *sql.Stmt.
@@ -35,7 +36,7 @@ func (s *Stmt) As(in interface{}) error {
 func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
 	if xlog.IsLevelEnabled(logrus.DebugLevel) {
 		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, args...)
+		defer logQuery(s.txID, s.query, ts, s.config, args...)
 	}
 	return s.stmt.ExecContext(ctx, args...)
 }
@@ -49,7 +50,7 @@ func (s *Stmt) Exec(args ...interface{}) (sql.Result, error) {
 func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*Rows, error) {
 	if xlog.IsLevelEnabled(logrus.DebugLevel) {
 		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, args...)
+		defer logQuery(s.txID, s.query, ts, s.config, args...)
 	}
 	rows, err := s.stmt.QueryxContext(ctx, args...)
 	if err != nil {
@@ -68,7 +69,7 @@ func (s *Stmt) Query(args ...interface{}) (*Rows, error) {
 func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *Row {
 	if xlog.IsLevelEnabled(logrus.DebugLevel) {
 		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, args...)
+		defer logQuery(s.txID, s.query, ts, s.config, args...)
 	}
 	return (*Row)(s.stmt.QueryRowxContext(ctx, args...))
 }
@@ -83,10 +84,10 @@ func (s *Stmt) Close() error {
 	return s.stmt.Close()
 }
 
-func newStmt(stmt *sqlx.Stmt, query string) *Stmt {
-	return &Stmt{stmt: stmt, query: query}
+func newStmt(stmt *sqlx.Stmt, query string, config *Config) *Stmt {
+	return &Stmt{stmt: stmt, query: query, config: config}
 }
 
-func newTxStmt(stmt *sqlx.Stmt, id, query string) *Stmt {
-	return &Stmt{stmt: stmt, query: query, txID: id}
+func newTxStmt(stmt *sqlx.Stmt, id, query string, config *Config) *Stmt {
+	return &Stmt{stmt: stmt, query: query, txID: id, config: config}
 }

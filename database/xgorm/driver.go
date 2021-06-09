@@ -8,29 +8,37 @@ import (
 	"gorm.io/gorm"
 )
 
-var _ database.Driver = (*driver)(nil)
+// Compile time check if Driver implements database.Driver.
+var _ database.Driver = (*Driver)(nil)
 
 // NewDriver creates a new gorm driver.
-func NewDriver(baseDriver database.Driver) (database.Driver, error) {
+func NewDriver(baseDriver database.Driver) (*Driver, error) {
 	if baseDriver == nil {
 		return nil, errors.New("xgorm provided nil base driver")
 	}
 	return wrapDriver(baseDriver), nil
 }
 
-func wrapDriver(drv database.Driver) database.Driver {
-	d, ok := drv.(*driver)
+func wrapDriver(drv database.Driver) *Driver {
+	d, ok := drv.(*Driver)
 	if ok {
 		return d
 	}
-	return &driver{base: drv}
+	return &Driver{base: drv}
 }
 
-type driver struct {
+// Driver is the gorm implementation for the driver name.
+type Driver struct {
 	base database.Driver
 }
 
-func (d *driver) ErrorCode(err error) cgerrors.ErrorCode {
+// DriverName gets the name of the driver.
+func (d *Driver) DriverName() string {
+	return "gorm+" + d.base.DriverName()
+}
+
+// ErrorCode gets the error code for given error.
+func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	switch err {
 	case gorm.ErrRecordNotFound:
 		return cgerrors.ErrorCode_NotFound
@@ -43,6 +51,7 @@ func (d *driver) ErrorCode(err error) cgerrors.ErrorCode {
 	}
 }
 
-func (d *driver) CanRetry(err error) bool {
+// CanRetry checks if the error relted query could be retried.
+func (d *Driver) CanRetry(err error) bool {
 	return d.base.CanRetry(err)
 }

@@ -20,6 +20,11 @@ type Driver struct {
 	mp map[string]cgerrors.ErrorCode
 }
 
+// DriverName gets the name of the driver.
+func (d *Driver) DriverName() string {
+	return "postgres"
+}
+
 // DefaultDriver gets the default lib/pq driver.
 func DefaultDriver() *Driver {
 	return defaultDriver
@@ -35,12 +40,12 @@ func NewDriver() *Driver {
 }
 
 // CustomErrorCode overwrites default error map for given class, which would result in given code.
-func (p *Driver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
-	p.mp[class] = code
+func (d *Driver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
+	d.mp[class] = code
 }
 
 // ErrorCode implements xservice.Driver interface.
-func (p *Driver) ErrorCode(err error) cgerrors.ErrorCode {
+func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	switch err {
 	case sql.ErrNoRows:
 		return cgerrors.ErrorCode_NotFound
@@ -51,7 +56,7 @@ func (p *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	if !ok {
 		return cgerrors.ErrorCode_Unknown
 	}
-	code, ok := p.mp[string(e.Code)]
+	code, ok := d.mp[string(e.Code)]
 	if ok {
 		return code
 	}
@@ -62,7 +67,7 @@ func (p *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	if len(class) < 2 {
 		return cgerrors.ErrorCode_Unknown
 	}
-	code, ok = p.mp[string(class)]
+	code, ok = d.mp[string(class)]
 	if !ok {
 		return cgerrors.ErrorCode_Internal
 	}
@@ -70,7 +75,7 @@ func (p *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 }
 
 // CanRetry implements xservice.Driver interface.
-func (p *Driver) CanRetry(err error) bool {
+func (d *Driver) CanRetry(err error) bool {
 	switch e := err.(type) {
 	case *pq.Error:
 		class := e.Code.Class()
@@ -85,12 +90,12 @@ func (p *Driver) CanRetry(err error) bool {
 }
 
 // Err converts given error into a cgerrors.Error.
-func (p *Driver) Err(err error) *cgerrors.Error {
+func (d *Driver) Err(err error) *cgerrors.Error {
 	if err == nil {
 		return nil
 	}
 	if e, ok := err.(*cgerrors.Error); ok {
 		return e
 	}
-	return cgerrors.New("", err.Error(), p.ErrorCode(err))
+	return cgerrors.New("", err.Error(), d.ErrorCode(err))
 }
