@@ -7,3 +7,5 @@ require (
 	github.com/kucjac/cleango v0.0.15
 	github.com/sirupsen/logrus v1.8.1
 )
+
+replace github.com/kucjac/cleango => ../../
