@@ -4,7 +4,5 @@ go 1.16
 
 require (
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/kucjac/cleango v0.0.16
+	github.com/kucjac/cleango v0.0.17
 )
-
-replace github.com/kucjac/cleango => ../../
