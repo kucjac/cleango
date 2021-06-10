@@ -87,6 +87,7 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 		return err
 	}
 	a.revision++
+	a.timestamp = e.Timestamp
 	a.uncommittedEvents = append(a.uncommittedEvents, e)
 
 	return nil
@@ -95,6 +96,11 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 // CommittedEvents gets the committed event messages.
 func (a *AggregateBase) CommittedEvents() []*Event {
 	return a.committedEvents
+}
+
+// UncommittedEvents gets the slice of uncommitted event messages.
+func (a *AggregateBase) UncommittedEvents() []*Event {
+	return a.uncommittedEvents
 }
 
 // MustLatestCommittedEvent gets the latest committed event message or panics.
@@ -126,7 +132,6 @@ func (a *AggregateBase) DecodeEventAs(eventData []byte, eventMsg interface{}) er
 }
 
 func (a *AggregateBase) reset() {
-	a.uncommittedEvents = nil
 	a.revision = 0
 	a.timestamp = 0
 }

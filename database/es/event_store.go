@@ -169,7 +169,7 @@ func (e *Store) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 	if err = e.storage.SaveSnapshot(ctx, snap); err != nil {
 		return e.err("saving snapshot failed", err)
 	}
-	return err
+	return nil
 }
 
 // Commit commits provided aggregate events.
@@ -182,6 +182,7 @@ func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 	for {
 		err := e.storage.SaveEvents(ctx, events)
 		if err == nil {
+			b.committedEvents, b.uncommittedEvents = b.uncommittedEvents, nil
 			return nil
 		}
 		if e.storage.ErrorCode(err) != cgerrors.ErrorCode_AlreadyExists {
@@ -194,6 +195,7 @@ func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 		// Reset aggregate, and it's base.
 		agg.Reset()
 		b.reset()
+		agg.SetBase(b)
 		if err = e.LoadEventsWithSnapshot(ctx, agg); err != nil {
 			return e.err("loading events with snapshot failed", err)
 		}
