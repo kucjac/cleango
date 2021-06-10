@@ -20,6 +20,7 @@ func logQuery(tx, query string, ts time.Time, config *Config, args ...interface{
 	sb := strings.Builder{}
 	sb.WriteString("query: ")
 	sb.WriteString(query)
+	sb.WriteRune(';')
 	if len(args) > 0 {
 		sb.WriteString(" args: (")
 		for i, arg := range args {

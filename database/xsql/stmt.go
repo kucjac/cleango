@@ -7,8 +7,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
-	"github.com/sirupsen/logrus"
 )
 
 // Stmt is the xsql type wrapper for the sqlx.Stmt.
@@ -34,10 +32,9 @@ func (s *Stmt) As(in interface{}) error {
 
 // ExecContext executes the statement with provided arguments.
 func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, s.config, args...)
-	}
+	ts := time.Now()
+	defer logQuery(s.txID, s.query, ts, s.config, args...)
+
 	return s.stmt.ExecContext(ctx, args...)
 }
 
@@ -48,10 +45,9 @@ func (s *Stmt) Exec(args ...interface{}) (sql.Result, error) {
 
 // QueryContext executes statement query with provided arguments.
 func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*Rows, error) {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, s.config, args...)
-	}
+	ts := time.Now()
+	defer logQuery(s.txID, s.query, ts, s.config, args...)
+
 	rows, err := s.stmt.QueryxContext(ctx, args...)
 	if err != nil {
 		return nil, err
@@ -67,10 +63,9 @@ func (s *Stmt) Query(args ...interface{}) (*Rows, error) {
 // QueryRowContext executes a query with provided arguments and creates a new Row.
 // The connection is based on given context.
 func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *Row {
-	if xlog.IsLevelEnabled(logrus.DebugLevel) {
-		ts := time.Now()
-		defer logQuery(s.txID, s.query, ts, s.config, args...)
-	}
+	ts := time.Now()
+	defer logQuery(s.txID, s.query, ts, s.config, args...)
+
 	return (*Row)(s.stmt.QueryRowxContext(ctx, args...))
 }
 
