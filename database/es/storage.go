@@ -6,11 +6,11 @@ import (
 	"github.com/kucjac/cleango/cgerrors"
 )
 
-//go:generate mockgen -destination=mockes/storage_gen.go -package=mockes . Storage
+//go:generate mockgen -destination=mockes/storage_gen.go -package=mockes . Storage,TxStorage
 //go:generate mockgen -destination=mockes/cursor_gen.go -package=mockes . Cursor
 
-// Storage is the interface used by the event store as a storage for its events and snapshots.
-type Storage interface {
+// StorageBase is the interface used by the event store as a storage for its events and snapshots.
+type StorageBase interface {
 	// SaveEvents all input events atomically in the storage.
 	SaveEvents(ctx context.Context, es []*Event) error
 
@@ -50,4 +50,16 @@ type CursorAggregate struct {
 	AggregateID string
 	Snapshot    *Snapshot
 	Events      []*Event
+}
+
+// Storage is a transaction beginner.
+type Storage interface {
+	BeginTx(ctx context.Context) (TxStorage, error)
+	StorageBase
+}
+
+type TxStorage interface {
+	StorageBase
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
 }
