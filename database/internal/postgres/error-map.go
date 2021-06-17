@@ -20,4 +20,9 @@ var ErrorMap = map[string]cgerrors.ErrorCode{
 	"23000": cgerrors.ErrorCode_AlreadyExists,
 	"23503": cgerrors.ErrorCode_NotFound, // Foreign Key Violation
 	"23505": cgerrors.ErrorCode_AlreadyExists,
+
+	// Class 42 - Table
+	"42P06": cgerrors.ErrorCode_AlreadyExists,
+	"42P07": cgerrors.ErrorCode_AlreadyExists,
+	"42712": cgerrors.ErrorCode_AlreadyExists,
 }
