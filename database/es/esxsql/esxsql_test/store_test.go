@@ -3,7 +3,9 @@ package esxsql_tst
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,9 +18,11 @@ import (
 )
 
 func testPostgresStore(t *testing.T) *esxsql.Storage {
+	schemaName := esxsql.ToSnakeCase(t.Name())
+	schemaName = strings.ReplaceAll(schemaName, "/", "_")
 	conn := testPostgresConn(t)
 	config := esxsql.DefaultConfig()
-	config.SchemaName = "public"
+	config.SchemaName = schemaName
 	s, err := esxsql.New(conn, config)
 	if err != nil {
 		t.Fatalf("creating esxsql storage failed: %v", err)
@@ -26,14 +30,29 @@ func testPostgresStore(t *testing.T) *esxsql.Storage {
 	return s
 }
 
-func testTx(t *testing.T, s *esxsql.Storage) (*esxsql.Transaction, func()) {
+func testTx(t *testing.T, s *esxsql.Storage) (es.TxStorage, func()) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	tx, err := s.BeginTx(ctx)
 	if err != nil {
 		t.Fatalf("starting transaction failed: %v", err)
 	}
+
+	var txc *xsql.Tx
+	err = tx.As(&txc)
+	if err != nil {
+		t.Fatalf("getting tx conn failed: %v", err)
+	}
+	config := s.Config()
+	if _, err = txc.Exec(fmt.Sprintf("CREATE SCHEMA %s;", config.SchemaName)); err != nil {
+		t.Fatalf("creating schema failed: %v", err)
+	}
+
+	if err = esxsql.Migrate(txc, &config, aggType); err != nil {
+		t.Fatalf("migrating failed: %v", err)
+	}
+
 	return tx, func() {
-		tx.Rollback()
+		tx.Rollback(context.Background())
 		cancel()
 	}
 }
@@ -108,10 +127,10 @@ var (
 )
 
 func TestPostgresEvents(t *testing.T) {
-	store := testPostgresStore(t)
 
 	ctx := context.Background()
 	t.Run("Batch", func(t *testing.T) {
+		store := testPostgresStore(t)
 		tx, cf := testTx(t, store)
 		defer cf()
 
@@ -164,6 +183,7 @@ func TestPostgresEvents(t *testing.T) {
 	})
 
 	t.Run("Single", func(t *testing.T) {
+		store := testPostgresStore(t)
 		tx, cf := testTx(t, store)
 		defer cf()
 
@@ -186,6 +206,7 @@ func TestPostgresEvents(t *testing.T) {
 	})
 
 	t.Run("AlreadyExists", func(t *testing.T) {
+		store := testPostgresStore(t)
 		tx, cf := testTx(t, store)
 		defer cf()
 
@@ -204,6 +225,7 @@ func TestPostgresEvents(t *testing.T) {
 	})
 
 	t.Run("Stream", func(t *testing.T) {
+		store := testPostgresStore(t)
 		tx, cf := testTx(t, store)
 		defer cf()
 
@@ -243,9 +265,9 @@ func TestPostgresEvents(t *testing.T) {
 }
 
 func TestPostgresSnapshots(t *testing.T) {
-	store := testPostgresStore(t)
 	ctx := context.Background()
 	t.Run("AlreadyExists", func(t *testing.T) {
+		store := testPostgresStore(t)
 		tx, cf := testTx(t, store)
 		defer cf()
 		snap := &es.Snapshot{
@@ -273,6 +295,8 @@ func TestPostgresSnapshots(t *testing.T) {
 	})
 
 	t.Run("Valid", func(t *testing.T) {
+		store := testPostgresStore(t)
+
 		tx, cf := testTx(t, store)
 		defer cf()
 		snap := &es.Snapshot{

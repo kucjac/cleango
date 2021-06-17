@@ -1,0 +1,4 @@
+{{$out:=.}}
+{{range $agg := .Aggregates}}
+    CREATE TABLE {{$out.SchemaName}}{{$out.EventTable}}_{{$agg.Type}} PARTITION OF {{$out.SchemaName}}{{$out.EventTable}} FOR VALUES IN('{{$agg.Value}}');
+{{end}}

@@ -12,10 +12,11 @@ import (
 	"github.com/kucjac/cleango/database/es"
 )
 
+// Compile time check if storage implements es.Storage interface.
 var _ es.Storage = (*Storage)(nil)
 
 // New creates a new event storage based on provided sqlx connection.
-func New(conn xsql.DB, cfg *Config) (*Storage, error) {
+func New(conn *xsql.Conn, cfg *Config) (*Storage, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -30,8 +31,13 @@ type Storage struct {
 	storage
 }
 
+// Config gets the storage configuration.
+func (s *Storage) Config() Config {
+	return *s.cfg
+}
+
 // BeginTx creates and begins a new transaction, which exposes *sqlx.Tx and allows atomic commits.
-func (s *Storage) BeginTx(ctx context.Context) (*Transaction, error) {
+func (s *Storage) BeginTx(ctx context.Context) (es.TxStorage, error) {
 	tx, _, err := s.getTx(ctx)
 	if err != nil {
 		return nil, err
@@ -55,7 +61,7 @@ func (s *Storage) As(dst interface{}) error {
 	return nil
 }
 
-// storage is the internal common implementation of the es.Storage for both Storage and Transaction.
+// storage is the internal common implementation of the es.StorageBase for both Storage and Transaction.
 type storage struct {
 	conn  xsql.DB
 	cfg   *Config

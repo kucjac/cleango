@@ -1,5 +1,7 @@
-CREATE TABLE {{.EventTable}} (
-    id BIGSERIAL NOT NULL PRIMARY KEY,
+{{$out:=.}}
+
+CREATE TABLE {{.SchemaName}}{{.EventTable}} (
+    id BIGSERIAL NOT NULL,
     event_id varchar(255) NOT NULL,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
@@ -7,25 +9,31 @@ CREATE TABLE {{.EventTable}} (
     timestamp bigint NOT NULL,
     event_type varchar(255) NOT NULL,
     event_data bytea,
-    CONSTRAINT aggregate_revision UNIQUE (aggregate_id, revision)
-);
+    CONSTRAINT aggregate_revision UNIQUE (aggregate_id, aggregate_type, revision)
+) PARTITION BY LIST(aggregate_type);
 
-CREATE TABLE {{.SnapshotTable}} (
+CREATE TABLE {{.SchemaName}}{{.SnapshotTable}} (
     id BIGSERIAL NOT NULL PRIMARY KEY,
     aggregate_id varchar(255) NOT NULL,
     aggregate_type varchar(255) NOT NULL,
     aggregate_version integer NOT NULL,
     revision integer NOT NULL,
     timestamp bigint NOT NULL,
-    snapshot_data bytea
+    snapshot_data bytea,
+    CONSTRAINT {{.SnapshotTable}}_aggregate_revision_uidx
+        unique(aggregate_id, aggregate_type, revision)
 );
 
 
-CREATE TABLE {{.AggregateTable}} (
+CREATE TABLE {{.SchemaName}}{{.AggregateTable}} (
     id BIGSERIAL NOT NULL PRIMARY KEY,
     aggregate_id VARCHAR(255) NOT NULL,
     aggregate_type VARCHAR(255) NOT NULL,
     inserted_at bigint NOT NULL,
-    constraint aggregate_aggregate_id_aggregate_type_uindex
+    constraint aggregate_aggregate_id_aggregate_type_uidx
         unique(aggregate_id, aggregate_type)
 );
+
+{{range $agg := .Aggregates}}
+CREATE TABLE {{$out.SchemaName}}{{$out.EventTable}}_{{$agg.Type}} PARTITION OF {{$out.SchemaName}}{{$out.EventTable}} FOR VALUES IN('{{$agg.Value}}');
+{{end}}
