@@ -42,4 +42,7 @@ type DB interface {
 
 	// Rebind changes argument format in provided query.
 	Rebind(query string) string
+
+	// DriverName gets the driver name.
+	DriverName() string
 }
