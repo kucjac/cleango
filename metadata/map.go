@@ -17,14 +17,15 @@ type Meta map[string]string
 
 // Constant metadata key definitions.
 const (
-	KeyContentLanguage = "contentLanguage"
-	KeyAcceptLanguages = "acceptLanguage"
-	KeyCurrency        = "currency"
-	KeyUserID          = "userId"
-	KeyToken           = "token"
-	KeyContentEncoding = "contentEncoding"
-	KeyRemoteIP        = "remoteIp"
-	KeyRequestID       = "requestId"
+	KeyContentLanguage = "cg:ContentLanguage"
+	KeyAcceptLanguages = "cg:AcceptLanguage"
+	KeyCurrency        = "cg:Currency"
+	KeyUserID          = "cg:UserId"
+	KeyToken           = "cg:Token"
+	KeyContentEncoding = "cg:ContentEncoding"
+	KeyRemoteIP        = "cg:RemoteIp"
+	KeyRequestID       = "cg:RequestId"
+	KeySubject         = "cg:Subject"
 )
 
 // Get gets the key from the given metadata.
@@ -82,6 +83,11 @@ func (m Meta) SetAcceptLanguages(tags []language.Tag) {
 		}
 	}
 	m[KeyAcceptLanguages] = sb.String()
+}
+
+// Subject gets the subject value from the metadata.
+func (m Meta) Subject() (string, bool) {
+	return m.Get(KeySubject)
 }
 
 // AcceptLanguages gets accepted languages by the user stored by the quality.
