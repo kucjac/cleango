@@ -18,7 +18,7 @@ var _ xservice.RunnerCloser = (*Mux)(nil)
 
 type subscriber struct {
 	sub         *pubsub.Subscription
-	topic       string
+	subject     string
 	id          string
 	maxHandlers int
 }
@@ -120,10 +120,10 @@ func (m *Mux) WithMaxHandlers(maxHandlers int) *Mux {
 	return im
 }
 
-// Subscribe registers topic subscriber that handles the message using provided handler with given options.
-func (m *Mux) Subscribe(topic string, hf xpubsub.HandlerFunc) {
+// Subscribe registers subject subscriber that handles the message using provided handler with given options.
+func (m *Mux) Subscribe(subject string, hf xpubsub.HandlerFunc) {
 	m.routes = append(m.routes, route{
-		topic:       topic,
+		subject:     subject,
 		h:           hf,
 		middlewares: m.middlewares,
 		maxHandlers: m.maxHandlers,
@@ -131,16 +131,16 @@ func (m *Mux) Subscribe(topic string, hf xpubsub.HandlerFunc) {
 }
 
 // Subscription registers subscription with specific handler.
-// Optionally the topic name might be set for the logging and context passing purpose.
-func (m *Mux) Subscription(sub *pubsub.Subscription, hf xpubsub.HandlerFunc, topic ...string) {
+// Optionally the subject name might be set for the logging and context passing purpose.
+func (m *Mux) Subscription(sub *pubsub.Subscription, hf xpubsub.HandlerFunc, subject ...string) {
 	sr := subscriptionRoute{
 		sub:         sub,
 		h:           hf,
 		middlewares: m.middlewares,
 		maxHandlers: m.maxHandlers,
 	}
-	if len(topic) > 0 {
-		sr.topic = topic[0]
+	if len(subject) > 0 {
+		sr.subject = subject[0]
 	}
 	m.subRoutes = append(m.subRoutes, sr)
 }
@@ -148,8 +148,8 @@ func (m *Mux) Subscription(sub *pubsub.Subscription, hf xpubsub.HandlerFunc, top
 func (m *Mux) close(ctx context.Context) error {
 	for _, s := range m.subscribers {
 		fields := logrus.Fields{"id": s.id}
-		if s.topic != "" {
-			fields["topic"] = s.topic
+		if s.subject != "" {
+			fields["subject"] = s.subject
 		}
 		xlog.WithFields(fields).Info("Closing subscription")
 		if err := s.sub.Shutdown(ctx); err != nil {
@@ -162,28 +162,28 @@ func (m *Mux) close(ctx context.Context) error {
 func (m *Mux) listenOnRoutes() error {
 	for _, r := range m.routes {
 
-		sub, err := pubsub.OpenSubscription(m.ctx, r.topic)
+		sub, err := pubsub.OpenSubscription(m.ctx, r.subject)
 		if err != nil {
 			return err
 		}
 
 		// Create a subscription with it's unique id.
 		sb := subscriber{
-			sub:   sub,
-			topic: r.topic,
-			id:    m.gen.NextId(),
+			sub:     sub,
+			subject: r.subject,
+			id:      m.gen.NextId(),
 		}
 
 		// Provide log fields for given subscription.
 		logFields := logrus.Fields{
-			"topic": r.topic,
-			"id":    sb.id,
+			"subject": r.subject,
+			"id":      sb.id,
 		}
 
 		xlog.WithFields(logFields).Infof("listening for subscription")
 		m.subscribers = append(m.subscribers, sb)
 
-		go m.listenOnSubscriber(sub, sb.id, r.topic, r.maxHandlers, r.middlewares.Handler(r.h))
+		go m.listenOnSubscriber(sub, sb.id, r.subject, r.maxHandlers, r.middlewares.Handler(r.h))
 	}
 	for _, ch := range m.children {
 		if err := ch.listenOnRoutes(); err != nil {
@@ -197,22 +197,22 @@ func (m *Mux) listenOnSubscriptions() error {
 	for _, r := range m.subRoutes {
 		// Create a subscription with it's unique id.
 		sb := subscriber{
-			sub:   r.sub,
-			id:    m.gen.NextId(),
-			topic: r.topic,
+			sub:     r.sub,
+			id:      m.gen.NextId(),
+			subject: r.subject,
 		}
 		// Provide log fields for given subscription.
 		logFields := logrus.Fields{
 			"id": sb.id,
 		}
-		if r.topic != "" {
-			logFields["topic"] = r.topic
+		if r.subject != "" {
+			logFields["subject"] = r.subject
 		}
 
 		xlog.WithFields(logFields).Info("listening for subscription")
 		m.subscribers = append(m.subscribers, sb)
 
-		go m.listenOnSubscriber(r.sub, sb.id, sb.topic, r.maxHandlers, r.middlewares.Handler(r.h))
+		go m.listenOnSubscriber(r.sub, sb.id, sb.subject, r.maxHandlers, r.middlewares.Handler(r.h))
 	}
 	for _, ch := range m.children {
 		if err := ch.listenOnSubscriptions(); err != nil {
@@ -224,17 +224,17 @@ func (m *Mux) listenOnSubscriptions() error {
 
 func (m *Mux) checkRoutes(mp map[string]struct{}) error {
 	for _, r := range m.routes {
-		if r.topic == "" {
-			return cgerrors.ErrInternal("no topic defined for one of the subscriber handlers")
+		if r.subject == "" {
+			return cgerrors.ErrInternal("no subject defined for one of the subscriber handlers")
 		}
-		_, ok := mp[r.topic]
+		_, ok := mp[r.subject]
 		if ok {
-			xlog.Warningf("topic: %s already has handler", r.topic)
+			xlog.Warningf("subject: %s already has handler", r.subject)
 		}
 		if r.h == nil {
-			return cgerrors.ErrInternalf("topic: %s handler not defined", r.topic)
+			return cgerrors.ErrInternalf("subject: %s handler not defined", r.subject)
 		}
-		mp[r.topic] = struct{}{}
+		mp[r.subject] = struct{}{}
 	}
 	for _, ch := range m.children {
 		if err := ch.checkRoutes(mp); err != nil {
@@ -244,7 +244,7 @@ func (m *Mux) checkRoutes(mp map[string]struct{}) error {
 	return nil
 }
 
-func (m *Mux) listenOnSubscriber(sb *pubsub.Subscription, id, topic string, maxHandlers int, handler xpubsub.Handler) {
+func (m *Mux) listenOnSubscriber(sb *pubsub.Subscription, id, subject string, maxHandlers int, handler xpubsub.Handler) {
 	sem := make(chan struct{}, maxHandlers)
 recvLoop:
 	for {
@@ -253,8 +253,8 @@ recvLoop:
 			fields := logrus.Fields{
 				"error": err,
 			}
-			if topic != "" {
-				fields["topic"] = topic
+			if subject != "" {
+				fields["subject"] = subject
 			}
 			xlog.WithFields(fields).Error("Receiving message failed")
 			continue
@@ -273,9 +273,9 @@ recvLoop:
 		go func(msg *pubsub.Message, h xpubsub.Handler) {
 			defer func() { <-sem }() // Release the semaphore.
 			// An error should be
-			ctx := context.WithValue(m.ctx, xpubsub.SubIdCtxKey, id)
-			if topic != "" {
-				ctx = context.WithValue(ctx, xpubsub.SubTopicCtxKey, topic)
+			ctx := context.WithValue(m.ctx, xpubsub.SubscriptionIdCtxKey, id)
+			if subject != "" {
+				ctx = context.WithValue(ctx, xpubsub.SubscriptionSubjectCtxKey, subject)
 			}
 			_ = h.Handle(ctx, msg)
 		}(psMsg, handler)
@@ -287,7 +287,7 @@ recvLoop:
 }
 
 type route struct {
-	topic       string
+	subject     string
 	h           xpubsub.Handler
 	middlewares xpubsub.Middlewares
 	maxHandlers int
@@ -298,5 +298,5 @@ type subscriptionRoute struct {
 	h           xpubsub.Handler
 	middlewares xpubsub.Middlewares
 	maxHandlers int
-	topic       string
+	subject     string
 }
