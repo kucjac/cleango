@@ -24,15 +24,15 @@ var subIdGen = uniqueid.NextGenerator("subscription")
 // MessageIDKey is the key that holds the unique request ID in a request context.
 const MessageIDKey ctxKeyMessageID = 0
 
-// CtxTopic gets the subscription topic from the given context.
-func CtxTopic(ctx context.Context) string {
-	t, _ := ctx.Value(xpubsub.SubTopicCtxKey).(string)
+// CtxSubject gets the subscription subject from the given context.
+func CtxSubject(ctx context.Context) string {
+	t, _ := ctx.Value(xpubsub.SubscriptionSubjectCtxKey).(string)
 	return t
 }
 
 // CtxSubscriptionID gets the subscription id from the given context.
 func CtxSubscriptionID(ctx context.Context) string {
-	id, _ := ctx.Value(xpubsub.SubIdCtxKey).(string)
+	id, _ := ctx.Value(xpubsub.SubscriptionIdCtxKey).(string)
 	return id
 }
 
@@ -75,7 +75,7 @@ func Logger(next xpubsub.Handler) xpubsub.Handler {
 	return xpubsub.HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
 		fields := logrus.Fields{
 			"subscriptionId": CtxSubscriptionID(ctx),
-			"topic":          CtxTopic(ctx),
+			"topic":          CtxSubject(ctx),
 		}
 		reqID := GetMessageID(ctx)
 		if reqID != "" {
