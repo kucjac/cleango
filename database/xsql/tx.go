@@ -102,7 +102,7 @@ func (tx *Tx) Query(query string, args ...interface{}) (*Rows, error) {
 // QueryContext queries the database within given transaction and returns an *xsql.Rows. Any placeholder parameters are replaced with supplied args.
 func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*Rows, error) {
 	ts := time.Now()
-	defer logQuery(tx.id, query, ts, tx.config, args...)
+	defer logQuery(tx.id, query, ts, tx.config, nil, args...)
 
 	rows, err := tx.tx.QueryxContext(ctx, query, args...)
 	if err != nil {
@@ -119,17 +119,18 @@ func (tx *Tx) QueryRow(query string, args ...interface{}) *Row {
 // QueryRowContext queries the database within given transaction and returns an *xsql.Row. Any placeholder parameters are replaced with supplied args.
 func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *Row {
 	ts := time.Now()
-	defer logQuery(tx.id, query, ts, tx.config, args...)
+	defer logQuery(tx.id, query, ts, tx.config, nil, args...)
 
 	return (*Row)(tx.tx.QueryRowxContext(ctx, query, args...))
 }
 
 // ExecContext execute provided query with the input arguments.
-func (tx *Tx) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (tx *Tx) ExecContext(ctx context.Context, query string, args ...interface{}) (res sql.Result, err error) {
 	ts := time.Now()
-	defer logQuery(tx.id, query, ts, tx.config, args...)
 
-	return tx.tx.ExecContext(ctx, query, args...)
+	res, err = tx.tx.ExecContext(ctx, query, args...)
+	logQuery(tx.id, query, ts, tx.config, res, args...)
+	return res, err
 }
 
 // Exec execute provided query with the input arguments.
@@ -156,7 +157,7 @@ func (tx *Tx) Prepare(query string) (*Stmt, error) {
 // Commit commits this transaction.
 func (tx *Tx) Commit() error {
 	ts := time.Now()
-	defer logQuery(tx.id, "COMMIT", ts, tx.config)
+	defer logQuery(tx.id, "COMMIT", ts, tx.config, nil)
 
 	return tx.tx.Commit()
 }
@@ -164,7 +165,7 @@ func (tx *Tx) Commit() error {
 // Rollback aborts this transaction.
 func (tx *Tx) Rollback() error {
 	ts := time.Now()
-	defer logQuery(tx.id, "ROLLBACK", ts, tx.config)
+	defer logQuery(tx.id, "ROLLBACK", ts, tx.config, nil)
 
 	return tx.tx.Rollback()
 }

@@ -31,11 +31,12 @@ func (s *Stmt) As(in interface{}) error {
 }
 
 // ExecContext executes the statement with provided arguments.
-func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (sql.Result, error) {
+func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (res sql.Result, err error) {
 	ts := time.Now()
-	defer logQuery(s.txID, s.query, ts, s.config, args...)
 
-	return s.stmt.ExecContext(ctx, args...)
+	res, err = s.stmt.ExecContext(ctx, args...)
+	logQuery(s.txID, s.query, ts, s.config, res, args...)
+	return res, err
 }
 
 // Exec executes the statement with provided arguments.
@@ -46,7 +47,7 @@ func (s *Stmt) Exec(args ...interface{}) (sql.Result, error) {
 // QueryContext executes statement query with provided arguments.
 func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*Rows, error) {
 	ts := time.Now()
-	defer logQuery(s.txID, s.query, ts, s.config, args...)
+	defer logQuery(s.txID, s.query, ts, s.config, nil, args...)
 
 	rows, err := s.stmt.QueryxContext(ctx, args...)
 	if err != nil {
@@ -64,7 +65,7 @@ func (s *Stmt) Query(args ...interface{}) (*Rows, error) {
 // The connection is based on given context.
 func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *Row {
 	ts := time.Now()
-	defer logQuery(s.txID, s.query, ts, s.config, args...)
+	defer logQuery(s.txID, s.query, ts, s.config, nil, args...)
 
 	return (*Row)(s.stmt.QueryRowxContext(ctx, args...))
 }

@@ -1,9 +1,11 @@
 package xsql
 
 import (
+	"database/sql"
 	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func logQuery(tx, query string, ts time.Time, config *Config, args ...interface{}) {
+func logQuery(tx, query string, ts time.Time, config *Config, res sql.Result, args ...interface{}) {
 	execDuration := time.Since(ts)
 	isLongRunning := config.WarnLongQueries && execDuration > config.LongQueriesTime
 	if !xlog.IsLevelEnabled(logrus.DebugLevel) && !isLongRunning {
@@ -72,6 +74,18 @@ func logQuery(tx, query string, ts time.Time, config *Config, args ...interface{
 	if tx != "" {
 		sb.WriteString(" tx: ")
 		sb.WriteString(tx)
+		sb.WriteRune(';')
+	}
+	if res != nil {
+		sb.WriteString(" affected: ")
+		affected, _ := res.RowsAffected()
+		sb.WriteString(strconv.Itoa(int(affected)))
+		if affected == 1 {
+			sb.WriteString(" row")
+		} else {
+			sb.WriteString(" rows")
+		}
+		sb.WriteRune(';')
 	}
 	sb.WriteString(" taken: ")
 	sb.WriteString(execDuration.String())

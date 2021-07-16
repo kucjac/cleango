@@ -86,7 +86,7 @@ func (c *Conn) Begin() (*Tx, error) {
 	id := txIdGen.NextId()
 
 	ts := time.Now()
-	logQuery(id, "BEGIN", ts, c.config)
+	logQuery(id, "BEGIN", ts, c.config, nil)
 
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -103,7 +103,7 @@ func (c *Conn) Begin() (*Tx, error) {
 func (c *Conn) BeginTx(ctx context.Context, options *sql.TxOptions) (*Tx, error) {
 	id := txIdGen.NextId()
 	ts := time.Now()
-	logQuery(id, "BEGIN", ts, c.config)
+	logQuery(id, "BEGIN", ts, c.config, nil)
 
 	tx, err := c.db.BeginTxx(ctx, options)
 	if err != nil {
@@ -141,7 +141,8 @@ func (c *Conn) Rebind(query string) string {
 // QueryContext queries the database and returns an *xsql.Rows. Any placeholder parameters are replaced with supplied args.
 func (c *Conn) QueryContext(ctx context.Context, query string, args ...interface{}) (*Rows, error) {
 	ts := time.Now()
-	defer logQuery("", query, ts, c.config, args...)
+	defer logQuery("", query, ts, c.config, nil, args...)
+
 	rows, err := c.db.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -152,7 +153,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args ...interface
 // QueryRowContext queries the database and returns an *xsql.Row. Any placeholder parameters are replaced with supplied args.
 func (c *Conn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *Row {
 	ts := time.Now()
-	defer logQuery("", query, ts, c.config, args...)
+	defer logQuery("", query, ts, c.config, nil, args...)
 	return (*Row)(c.db.QueryRowxContext(ctx, query, args...))
 }
 
@@ -168,10 +169,11 @@ func (c *Conn) QueryRow(query string, args ...interface{}) *Row {
 
 // ExecContext executes provided query with the input arguments.
 // The connection is aware of given context.
-func (c *Conn) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+func (c *Conn) ExecContext(ctx context.Context, query string, args ...interface{}) (res sql.Result, err error) {
 	ts := time.Now()
-	defer logQuery("", query, ts, c.config, args...)
-	return c.db.ExecContext(ctx, query, args...)
+	res, err = c.db.ExecContext(ctx, query, args...)
+	logQuery("", query, ts, c.config, res, args...)
+	return res, err
 }
 
 // Exec execute provided query with the input arguments.
