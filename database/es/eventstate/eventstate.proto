@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package eventstate;
+
+option go_package = "github.com/kucjac/cleango/database/es/eventstate";
+
+// EventUnhandled is an event message which states that an event is marked as unhandled.
+message EventUnhandled {
+  string event_type = 1;
+  int64 timestamp = 2;
+  int32 max_failures = 3;
+  int64 min_fail_interval = 4;
+  int64 max_handling_time = 5;
+}
+
+// EventHandlingStarted is an event message occurred when given handler just
+// started handling an event.
+message EventHandlingStarted {
+  string handler_name = 1;
+}
+
+// EventHandlingFinished is an event message occurred when given handler just
+// finished successfully handling an event.
+message EventHandlingFinished {
+  string handler_name = 1;
+}
+
+// EventHandlingFailed is an event message occurred on a failure when handling given event.
+message EventHandlingFailed {
+  string handler_name = 1;
+  string err = 2;
+  int32 err_code = 3;
+}
+
+// FailureCountReset resets failure count for given event.
+message FailureCountReset {
+  string handlerName = 1;
+}

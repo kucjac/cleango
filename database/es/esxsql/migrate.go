@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"errors"
+	"fmt"
 	"strings"
 	"text/template"
 
@@ -97,7 +98,8 @@ func Migrate(conn xsql.DB, config *Config, aggregateTypes ...string) error {
 	return nil
 }
 
-func MigratePartitions(conn xsql.DB, config *Config, aggregateTypes ...string) error {
+// MigrateEventPartitions migrates event partitions
+func MigrateEventPartitions(conn xsql.DB, config *Config, aggregateTypes ...string) error {
 	var buf bytes.Buffer
 	if err := config.Validate(); err != nil {
 		return err
@@ -152,5 +154,29 @@ func MigratePartitions(conn xsql.DB, config *Config, aggregateTypes ...string) e
 		}
 	}
 
+	return nil
+}
+
+// MigrateEventStatePartitions create partitions on event state by its type.
+func MigrateEventStatePartitions(conn xsql.DB, cfg *Config, handlerNames ...string) error {
+	xlog.Infof("Migrating esxsql event state partitions - handlers: (%s)", strings.Join(handlerNames, ","))
+	for _, handlerName := range handlerNames {
+		r := strings.NewReplacer(":", "_", ".", "_", ",", "_")
+		nt := r.Replace(handlerName)
+		queries := []string{
+			conn.Rebind(fmt.Sprintf(`CREATE TABLE %s PARTITION OF %s FOR VALUES IN('%s')`, nt, cfg.eventStateTableName(), handlerName)),
+		}
+		for _, q := range queries {
+			_, err := conn.Exec(q)
+			if err != nil {
+				if conn.ErrorCode(err) == cgerrors.ErrorCode_AlreadyExists {
+					xlog.Debugf("%v", err)
+				} else {
+					xlog.Errorf("Code: %d - %v", conn.ErrorCode(err), err)
+					return err
+				}
+			}
+		}
+	}
 	return nil
 }

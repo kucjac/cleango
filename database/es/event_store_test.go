@@ -240,14 +240,9 @@ func TestStore(t *testing.T) {
 				t.Fatalf("aggregate base should contain two uncommitted events but have: %d", len(base.UncommittedEvents()))
 			}
 
-			tx := mockes.NewMockTxStorage(ctrl)
-			storage.EXPECT().BeginTx(ctx).Return(tx, nil)
-
-			tx.EXPECT().
+			storage.EXPECT().
 				SaveEvents(ctx, base.UncommittedEvents()).
 				Return(nil)
-
-			tx.EXPECT().Commit(ctx)
 
 			if err = store.Commit(ctx, agg); err != nil {
 				t.Fatalf("committing aggregate messages failed: %v", err)
@@ -293,14 +288,10 @@ func TestStore(t *testing.T) {
 				t.Fatalf("setting name changed message failed: %v", err)
 			}
 
-			tx := mockes.NewMockTxStorage(ctrl)
-			storage.EXPECT().BeginTx(ctx).Return(tx, nil)
-
 			// Having a situation that another event with revision two for given aggregate.
-			tx.EXPECT().
+			storage.EXPECT().
 				SaveEvents(ctx, agg.Base.UncommittedEvents()).
 				Return(errors.New("event with given revision already exists"))
-			tx.EXPECT().Rollback(ctx)
 
 			storage.EXPECT().ErrorCode(gomock.Any()).Return(cgerrors.ErrorCode_AlreadyExists)
 
@@ -316,11 +307,9 @@ func TestStore(t *testing.T) {
 				Return([]*es.Event{e2}, nil)
 
 			// Now it is assumed that it passed to push the change.
-			storage.EXPECT().BeginTx(ctx).Return(tx, nil)
-			tx.EXPECT().
+			storage.EXPECT().
 				SaveEvents(ctx, gomock.Any()).
 				Return(nil)
-			tx.EXPECT().Commit(ctx)
 
 			if err = store.Commit(ctx, agg); err != nil {
 				t.Fatalf("committing message should not fail: %v", err)

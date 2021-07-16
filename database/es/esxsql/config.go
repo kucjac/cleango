@@ -8,20 +8,27 @@ import (
 
 // Config is the configuration for the event storage.
 type Config struct {
-	EventTable     string
-	SnapshotTable  string
-	SchemaName     string // Optional
-	AggregateTable string
-	WorkersCount   int
+	EventTable              string
+	SnapshotTable           string
+	SchemaName              string // Optional
+	AggregateTable          string
+	HandlerRegistryTable    string
+	EventStateTable         string
+	EventHandleFailureTable string
+	WorkersCount            int
+	useEventState           bool
 }
 
 // DefaultConfig creates a new default config.
 func DefaultConfig() *Config {
 	return &Config{
-		EventTable:     "event",
-		SnapshotTable:  "snapshot",
-		AggregateTable: "aggregate",
-		WorkersCount:   10,
+		EventTable:              "event",
+		SnapshotTable:           "snapshot",
+		AggregateTable:          "aggregate",
+		HandlerRegistryTable:    "handler_registry",
+		EventStateTable:         "event_state",
+		EventHandleFailureTable: "event_handle_failure",
+		WorkersCount:            10,
 	}
 }
 
@@ -35,6 +42,17 @@ func (c *Config) Validate() error {
 	}
 	if c.AggregateTable == "" {
 		return cgerrors.ErrInternalf("no aggregate table name provided")
+	}
+	if c.useEventState {
+		if c.HandlerRegistryTable == "" {
+			return cgerrors.ErrInternalf("no handler registry table name provided")
+		}
+		if c.EventStateTable == "" {
+			return cgerrors.ErrInternalf("no event state table name provided")
+		}
+		if c.EventHandleFailureTable == "" {
+			return cgerrors.ErrInternalf("no event handle failure table name provided")
+		}
 	}
 	return nil
 }
@@ -66,5 +84,35 @@ func (c *Config) aggregateTableName() string {
 		sb.WriteRune('.')
 	}
 	sb.WriteString(c.AggregateTable)
+	return sb.String()
+}
+
+func (c *Config) eventHandleFailureTableName() string {
+	sb := strings.Builder{}
+	if c.SchemaName != "" {
+		sb.WriteString(c.SchemaName)
+		sb.WriteRune('.')
+	}
+	sb.WriteString(c.EventHandleFailureTable)
+	return sb.String()
+}
+
+func (c *Config) eventStateTableName() string {
+	sb := strings.Builder{}
+	if c.SchemaName != "" {
+		sb.WriteString(c.SchemaName)
+		sb.WriteRune('.')
+	}
+	sb.WriteString(c.EventStateTable)
+	return sb.String()
+}
+
+func (c *Config) handlerRegistryTableName() string {
+	sb := strings.Builder{}
+	if c.SchemaName != "" {
+		sb.WriteString(c.SchemaName)
+		sb.WriteRune('.')
+	}
+	sb.WriteString(c.HandlerRegistryTable)
 	return sb.String()
 }

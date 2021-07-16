@@ -7,8 +7,6 @@ import (
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/codec"
-	"github.com/kucjac/cleango/xlog"
-	"github.com/kucjac/cleango/xpubsub"
 )
 
 // Generate the mock store.
@@ -51,7 +49,7 @@ type StreamEventsRequest struct {
 }
 
 // New creates new EventStore implementation.
-func New(cfg *Config, eventCodec EventCodec, snapCodec SnapshotCodec, storage Storage) (*Store, error) {
+func New(cfg *Config, eventCodec EventCodec, snapCodec SnapshotCodec, storage StorageBase) (*Store, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -68,9 +66,18 @@ func New(cfg *Config, eventCodec EventCodec, snapCodec SnapshotCodec, storage St
 type Store struct {
 	*AggregateBaseSetter
 	snapCodec  codec.Codec
-	storage    Storage
+	storage    StorageBase
 	bufferSize int
-	topics     map[string]xpubsub.Topic
+}
+
+// WithStorage creates a copy of the event store with given storage base.
+func (e *Store) WithStorage(base StorageBase) *Store {
+	return &Store{
+		AggregateBaseSetter: e.AggregateBaseSetter,
+		snapCodec:           e.snapCodec,
+		storage:             base,
+		bufferSize:          e.bufferSize,
+	}
 }
 
 // LoadEvents gets the event stream and applies on provided aggregate.
@@ -171,56 +178,17 @@ func (e *Store) SaveSnapshot(ctx context.Context, agg Aggregate) error {
 
 // Commit commits all uncommitted events within given aggregate.
 func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
-	return e.doAndCommit(ctx, agg, func([]*Event) error { return nil })
-}
-
-// DoAndCommit atomically saves all uncommitted events within given aggregate, executes a 'do' function
-// and on success commits the changes.
-func (e *Store) DoAndCommit(ctx context.Context, agg Aggregate, do func(events []*Event) error) error {
-	return e.doAndCommit(ctx, agg, do)
-}
-
-func (e *Store) doAndCommit(ctx context.Context, agg Aggregate, do func(events []*Event) error) error {
 	b := agg.AggBase()
 	events := b.uncommittedEvents
 	if len(events) == 0 {
 		return nil
 	}
 	for {
-		// Begin a new transaction.
-		tx, err := e.storage.BeginTx(ctx)
-		if err != nil {
-			return err
-		}
-
 		// Try to save the events.
-		if err = tx.SaveEvents(ctx, events); err == nil {
-			// If everything went well execute a 'do' function.
-			if err = do(events); err != nil {
-				// Rollback the transaction on error.
-				if er := tx.Rollback(ctx); er != nil {
-					xlog.WithContext(ctx).
-						WithField("err", er).
-						Error("rolling back transaction failed")
-				}
-				return err
-			}
-
-			// Commit the changes atomically with 'do' function.
-			if er := tx.Commit(ctx); er != nil {
-				xlog.WithContext(ctx).
-					WithField("err", err).
-					Error("committing transaction failed")
-			}
-
-			// Mark the events committed.
+		err := e.storage.SaveEvents(ctx, events)
+		if err == nil {
 			b.committedEvents, b.uncommittedEvents = b.uncommittedEvents, nil
 			return nil
-		}
-
-		// Rollback the transaction as the error occurred.
-		if err = tx.Rollback(ctx); err != nil {
-			return e.err("rolling back transaction failed", err)
 		}
 
 		// Everytime when the save fails due to the already exists error.
@@ -234,14 +202,12 @@ func (e *Store) doAndCommit(ctx context.Context, agg Aggregate, do func(events [
 		agg.Reset()
 		b.reset()
 		agg.SetBase(b)
-
-		// Load all the events, try with snapshot.
 		if err = e.LoadEventsWithSnapshot(ctx, agg); err != nil {
 			return e.err("loading events with snapshot failed", err)
 		}
 
-		// Again try to apply the events.
 		for _, event := range events {
+			// Make a copy of given event.
 			b.revision++
 			event.Revision = b.revision
 			event.Timestamp = time.Now().UTC().UnixNano()

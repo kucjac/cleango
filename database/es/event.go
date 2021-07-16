@@ -1,11 +1,8 @@
 package es
 
 import (
-	"context"
 	"time"
 )
-
-//go:generate protoc -I=. --go_out=. event.proto --go_opt=paths=source_relative
 
 // EventMessage is an interface that defines event messages.
 type EventMessage interface {
@@ -27,9 +24,4 @@ func (x *Event) Copy() *Event {
 
 func (x *Event) Time() time.Time {
 	return time.Unix(0, x.Timestamp)
-}
-
-// EventHandler is an interface used for handling events.
-type EventHandler interface {
-	Handle(ctx context.Context, e *Event)
 }

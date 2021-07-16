@@ -19,10 +19,13 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("migrating failed: %v", err)
 		}
 
-		err = esxsql.MigratePartitions(conn, config, "Orders", "TestAggregateType")
+		err = esxsql.MigrateEventPartitions(conn, config, "Orders", "TestAggregateType")
 		if err != nil {
 			t.Fatalf("migrating failed: %v", err)
 		}
 
+		if err = esxsql.MigrateEventStatePartitions(conn, config, "test_handler_1", "test_handler_2"); err != nil {
+			t.Fatalf("migrating partition failed: %v", err)
+		}
 	})
 }

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package es;
 
-option go_package = "github.com/kucjac/cleango/eventsource";
+option go_package = "github.com/kucjac/cleango/database/es";
 
 // Event is the event source message model.
 message Event {

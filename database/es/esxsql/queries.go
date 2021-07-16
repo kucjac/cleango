@@ -18,6 +18,26 @@ const (
 	// listAggregates             = `SELECT id, aggregate_id FROM %s WHERE aggregate_type = ? LIMIT ? ORDER BY id`
 	listNextAggregates   = `SELECT id, aggregate_id FROM %s WHERE aggregate_type = ? AND id > ? LIMIT ? ORDER BY id`
 	listEventStreamQuery = `SELECT id, aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data FROM %s `
+	registerHandler      = `INSERT INTO %s (handler_name, event_type) VALUES (?,?)`
+	listHandlers         = `
+SELECT handler_name, array_agg(event_type) AS event_types 
+FROM %s 
+WHERE event_type = ?
+GROUP BY handler_name`
+	updateEventState = `UPDATE %s SET state = ?, timestamp = ? WHERE event_id = ? AND handler_name = ?`
+	insertEventState = `INSERT INTO %s (event_id, state, handler_name, timestamp) 
+SELECT ?,?,handler_name,?
+FROM %s AS h
+WHERE h.event_type = ?`
+	insertHandlingFailure = `INSERT INTO %s (event_id, handler_name, timestamp, error_message, error_code, retry_no) VALUES (?,?,?,?,?,?)`
+	findHandlerEvents     = `SELECT e.aggregate_id, e.aggregate_type, e.revision, e.timestamp, e.event_id, e.event_type, e.event_data, es.handler_name 
+FROM %s AS es  
+JOIN %s AS e ON es.event_id=e.event_id`
+	findHandlingFailures = `SELECT 
+	e.aggregate_id, e.aggregate_type, e.revision, e.timestamp, e.event_id, e.event_type, e.event_data, 
+	ef.handler_name, ef.timestamp, ef.error_message, ef.error_code, ef.retry_no 
+FROM %s AS ef 
+LEFT JOIN %s AS e ON ef.event_id=e.event_id`
 )
 
 type queries struct {
@@ -30,6 +50,13 @@ type queries struct {
 	insertAggregate        string
 	listNextAggregates     string
 	listEventStreamQuery   string
+	registerHandler        string
+	listHandlers           string
+	updateEventState       string
+	insertEventState       string
+	insertHandlingFailure  string
+	findHandlerEvents      string
+	findHandlingFailures   string
 }
 
 func (q queries) batchInsertEvent(length int) string {
@@ -55,5 +82,12 @@ func newQueries(conn xsql.DB, c *Config) queries {
 		insertAggregate:        conn.Rebind(fmt.Sprintf(insertAggregate, c.aggregateTableName())),
 		listNextAggregates:     conn.Rebind(fmt.Sprintf(listNextAggregates, c.aggregateTableName())),
 		listEventStreamQuery:   conn.Rebind(fmt.Sprintf(listEventStreamQuery, c.eventTableName())),
+		registerHandler:        conn.Rebind(fmt.Sprintf(registerHandler, c.handlerRegistryTableName())),
+		listHandlers:           conn.Rebind(fmt.Sprintf(listHandlers, c.handlerRegistryTableName())),
+		updateEventState:       conn.Rebind(fmt.Sprintf(updateEventState, c.eventStateTableName())),
+		insertEventState:       conn.Rebind(fmt.Sprintf(insertEventState, c.eventStateTableName(), c.handlerRegistryTableName())),
+		insertHandlingFailure:  conn.Rebind(fmt.Sprintf(insertHandlingFailure, c.eventHandleFailureTableName())),
+		findHandlerEvents:      conn.Rebind(fmt.Sprintf(findHandlerEvents, c.eventStateTableName(), c.eventTableName())),
+		findHandlingFailures:   conn.Rebind(fmt.Sprintf(findHandlingFailures, c.eventHandleFailureTableName(), c.eventTableName())),
 	}
 }
