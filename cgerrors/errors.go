@@ -175,6 +175,16 @@ func ErrInvalidArgumentf(format string, a ...interface{}) *Error {
 	return newError(ErrorCode_InvalidArgument, fmt.Sprintf(format, a...))
 }
 
+// ErrFailedPrecondition generates a 400 error.
+func ErrFailedPrecondition(a ...interface{}) *Error {
+	return newError(ErrorCode_FailedPrecondition, fmt.Sprint(a...))
+}
+
+// ErrFailedPreconditionf generates a 400 error.
+func ErrFailedPreconditionf(format string, a ...interface{}) *Error {
+	return newError(ErrorCode_FailedPrecondition, fmt.Sprintf(format, a...))
+}
+
 // ErrUnauthenticated generates a 401 error.
 func ErrUnauthenticated(a ...interface{}) *Error {
 	return newError(ErrorCode_Unauthenticated, fmt.Sprint(a...))
