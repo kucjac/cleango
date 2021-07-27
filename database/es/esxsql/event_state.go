@@ -57,9 +57,11 @@ func NewStateStorage(conn *xsql.Conn, cfg *Config) (*StateStorage, error) {
 	if cfg == nil {
 		return nil, cgerrors.ErrInternal("no storage config provided")
 	}
-	cfg.useEventState = true
 	if err := cfg.Validate(); err != nil {
 		return nil, err
+	}
+	if cfg.EventState == nil {
+		return nil, cgerrors.ErrInternal("no event state config found")
 	}
 	if cfg.WorkersCount == 0 {
 		cfg.WorkersCount = 10

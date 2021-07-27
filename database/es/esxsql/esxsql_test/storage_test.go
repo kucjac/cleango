@@ -47,7 +47,9 @@ func testTx(t *testing.T, s *esxsql.Storage) (es.TxStorage, func()) {
 		t.Fatalf("creating schema failed: %v", err)
 	}
 
-	if err = esxsql.Migrate(txc, &config, aggType); err != nil {
+	config.AggregateTypes = []string{aggType}
+
+	if err = esxsql.Migrate(txc, &config); err != nil {
 		t.Fatalf("migrating failed: %v", err)
 	}
 

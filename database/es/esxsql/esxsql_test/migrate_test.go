@@ -1,31 +1,53 @@
 package esxsql_tst
 
 import (
-	"os"
 	"testing"
 
 	"github.com/kucjac/cleango/database/es/esxsql"
+	"github.com/kucjac/cleango/database/es/eventstate"
 )
 
 func TestMigrate(t *testing.T) {
 	t.Run("Postgres", func(t *testing.T) {
-		if os.Getenv("MIGRATE") != "1" {
-			t.Skip("MIGRATE environment variable not set")
-		}
-		conn := testPostgresConn(t)
-		config := esxsql.DefaultConfig()
-		err := esxsql.Migrate(conn, config, "TestAggregateType", "AnotherAggregate")
-		if err != nil {
-			t.Fatalf("migrating failed: %v", err)
-		}
+		t.Run("NoPartitions", func(t *testing.T) {
+			conn := testPostgresConn(t)
+			tx, err := conn.Begin()
+			if err != nil {
+				t.Fatalf("new transaction failed: %v", err)
+			}
+			defer tx.Rollback()
+			config := esxsql.DefaultConfig("Orders", "TestAggregateType").
+				WithEventState(esxsql.DefaultEventStateConfig(
+					eventstate.Handler{Name: "TestHandler1", EventTypes: []string{"event_type_1", "event_type_2"}},
+					eventstate.Handler{Name: "TestHandler2", EventTypes: []string{eventType}},
+				))
 
-		err = esxsql.MigrateEventPartitions(conn, config, "Orders", "TestAggregateType")
-		if err != nil {
-			t.Fatalf("migrating failed: %v", err)
-		}
+			err = esxsql.Migrate(tx, config)
+			if err != nil {
+				t.Fatalf("migrating failed: %v", err)
+			}
+		})
+		t.Run("Partitioned", func(t *testing.T) {
+			conn := testPostgresConn(t)
+			tx, err := conn.Begin()
+			if err != nil {
+				t.Fatalf("new transaction failed: %v", err)
+			}
+			defer tx.Rollback()
+			config := esxsql.DefaultConfig("Orders", "TestAggregateType").
+				WithEventState(esxsql.DefaultEventStateConfig(
+					eventstate.Handler{Name: "TestHandler1", EventTypes: []string{"event_type_1", "event_type_2"}},
+					eventstate.Handler{Name: "TestHandler2", EventTypes: []string{eventType}},
+				))
 
-		if err = esxsql.MigrateEventStatePartitions(conn, config, "test_handler_1", "test_handler_2"); err != nil {
-			t.Fatalf("migrating partition failed: %v", err)
-		}
+			config.PartitionEventTable = true
+			config.EventState.PartitionState = true
+
+			err = esxsql.Migrate(tx, config)
+			if err != nil {
+				t.Fatalf("migrating failed: %v", err)
+			}
+		})
 	})
+
 }

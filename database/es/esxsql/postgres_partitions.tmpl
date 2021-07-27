@@ -1,5 +1,0 @@
-{{$out:=.}}
-{{range $agg := .Aggregates}}
-    CREATE TABLE {{$out.SchemaName}}{{$out.EventTable}}_{{$agg.Type}} PARTITION OF {{$out.SchemaName}}{{$out.EventTable}} FOR VALUES IN('{{$agg.Value}}');
-    CREATE UNIQUE INDEX {{$out.EventTable}}_{{$agg.Type}}_event_id_uidx ON {{$out.EventTable}}_{{$agg.Type}} (event_id);
-{{end}}

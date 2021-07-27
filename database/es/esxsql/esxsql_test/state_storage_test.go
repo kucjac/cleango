@@ -19,6 +19,11 @@ func testPostgresStateStore(t *testing.T) *esxsql.StateStorage {
 	conn := testPostgresConn(t)
 	config := esxsql.DefaultConfig()
 	config.SchemaName = schemaName
+	config.AggregateTypes = []string{aggType}
+	config.WithEventState(esxsql.DefaultEventStateConfig(
+		eventstate.Handler{Name: testHandler, EventTypes: []string{eventType, otherEventType}},
+		eventstate.Handler{Name: testHandler2, EventTypes: []string{eventType}},
+	))
 	s, err := esxsql.NewStateStorage(conn, config)
 	if err != nil {
 		t.Fatalf("creating esxsql storage failed: %v", err)
@@ -43,14 +48,9 @@ func testStateTx(t *testing.T, s *esxsql.StateStorage) (eventstate.TxStorage, fu
 		t.Fatalf("creating schema failed: %v", err)
 	}
 
-	if err = esxsql.Migrate(txc, &config, aggType); err != nil {
+	if err = esxsql.Migrate(txc, &config); err != nil {
 		t.Fatalf("migrating failed: %v", err)
 	}
-
-	if err = esxsql.MigrateEventStatePartitions(txc, &config, testHandler, testHandler2); err != nil {
-		t.Fatalf("migrating event state partitions failed: %v", err)
-	}
-
 	return tx, func() {
 		tx.Rollback(context.Background())
 		cancel()
@@ -64,15 +64,7 @@ func TestPostgresStateStorage(t *testing.T) {
 	tx, cf := testStateTx(t, store)
 	defer cf()
 
-	err := tx.RegisterHandlers(ctx,
-		eventstate.Handler{Name: testHandler, EventTypes: []string{eventType, otherEventType}},
-		eventstate.Handler{Name: testHandler2, EventTypes: []string{eventType}},
-	)
-	if err != nil {
-		t.Fatalf("register handler failed: %v", err)
-	}
-
-	err = tx.MarkUnhandled(ctx, &e1, &e2)
+	err := tx.MarkUnhandled(ctx, &e1, &e2)
 	if err != nil {
 		t.Fatalf("marking unhandled failed: %v", err)
 	}
