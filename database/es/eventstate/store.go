@@ -104,7 +104,7 @@ func (s *Store) Commit(ctx context.Context, aggregate es.Aggregate) error {
 		options := s.getEventOptions(e)
 
 		// define new event state aggregate.
-		state, err := InitializeEventState(e, s.Store.AggregateBaseSetter, options)
+		state, err := InitializeUnhandledEventState(e, s.Store.AggregateBaseSetter, options)
 		if err != nil {
 			if er := tx.Rollback(ctx); er != nil {
 				xlog.WithContext(ctx).

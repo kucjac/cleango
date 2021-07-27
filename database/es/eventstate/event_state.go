@@ -67,6 +67,7 @@ func (o *Options) Validate() error {
 	return nil
 }
 
+// DefaultOptions creates default event state options.
 func DefaultOptions() *Options {
 	return &Options{
 		MaxFailures:     5,
@@ -75,9 +76,9 @@ func DefaultOptions() *Options {
 	}
 }
 
-// InitializeEventState creates and initializes a new EventState model with an EventUnhandled message.
-func InitializeEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) (*EventState, error) {
-	eh := &EventState{}
+// InitializeUnhandledEventState creates and initializes a new EventState model with an EventUnhandled message.
+func InitializeUnhandledEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) (*EventState, error) {
+	eh := &EventState{handlers: map[string]handles{}}
 	if o == nil {
 		o = DefaultOptions()
 	}
@@ -94,9 +95,9 @@ func InitializeEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) (
 	return eh, nil
 }
 
-// NewEventState creates a new EventState model.
+// NewEventState creates a new EventState aggregate model.
 func NewEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) *EventState {
-	eh := &EventState{}
+	eh := &EventState{handlers: map[string]handles{}}
 	if o == nil {
 		o = DefaultOptions()
 	}
@@ -133,6 +134,8 @@ func (s *EventState) Apply(e *es.Event) (err error) {
 		err = s.applyHandlingFinished(e)
 	case EventHandlingFailedType:
 		err = s.applyHandlingFailed(e)
+	case FailureCountResetType:
+		err = s.applyFailureCountReset(e)
 	default:
 		return cgerrors.ErrInternal("undefined event type").WithMeta("event_type", e.EventType)
 	}
@@ -190,6 +193,18 @@ func (s *EventState) HandlingFailed(handlerName string, handlingErr error) error
 	return nil
 }
 
+// ResetFailures resets handling state failures.
+func (s *EventState) ResetFailures(handlerName string) error {
+	msg, err := newFailureCountReset(handlerName)
+	if err != nil {
+		return err
+	}
+	if err = s.base.SetEvent(msg); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *EventState) applyUnhandled(e *es.Event) error {
 	var msg EventUnhandled
 	if err := s.base.DecodeEventAs(e.EventData, &msg); err != nil {
@@ -211,21 +226,23 @@ func (s *EventState) applyHandlingStarted(e *es.Event) error {
 	h := s.handlers[msg.HandlerName]
 	if h.latestState == StateStarted &&
 		time.Now().UTC().Before(h.lastStarted.Add(s.maxHandlingInterval)) {
-		return cgerrors.ErrAlreadyExists("given event handling had already started")
+		return cgerrors.ErrFailedPrecondition("given event handling had already started")
 	}
+
 	if h.latestState == StateFinished {
 		return cgerrors.ErrAlreadyExists("event already handled")
 	}
 
 	if h.totalFailures > s.maxFailures {
-		return cgerrors.New("", "too many tries", cgerrors.ErrorCode_ResourceExhausted)
+		return cgerrors.New("", "too many handle tries for given handler", cgerrors.ErrorCode_ResourceExhausted)
 	}
 
-	if h.totalFailures > 0 {
+	if h.latestState == StateFailed {
 		// Check if there had passed at least minimum required time before last failure.
-		minTime := h.lastFailure.Add(s.minFailInterval * time.Duration(1<<uint(h.totalFailures)))
+		failInterval := s.minFailInterval * time.Duration(1<<uint(h.totalFailures-1))
+		minTime := h.lastFailure.Add(failInterval)
 		if time.Now().UTC().Before(minTime) {
-			return cgerrors.New("", "too many tries within time duration", cgerrors.ErrorCode_Unavailable)
+			return cgerrors.ErrFailedPrecondition("too many tries within time duration")
 		}
 	}
 
@@ -265,6 +282,7 @@ func (s *EventState) applyHandlingFailed(e *es.Event) error {
 		code:        cgerrors.ErrorCode(msg.ErrCode),
 		retryNumber: h.totalFailures,
 	}})
+	s.handlers[msg.HandlerName] = h
 	return nil
 }
 
@@ -275,6 +293,8 @@ func (s *EventState) applyFailureCountReset(e *es.Event) error {
 	}
 	h := s.handlers[msg.HandlerName]
 	h.totalFailures = 0
+	h.latestState = StateUnhandled
+	h.lastFailure = time.Time{}
 	s.handlers[msg.HandlerName] = h
 	return nil
 }
