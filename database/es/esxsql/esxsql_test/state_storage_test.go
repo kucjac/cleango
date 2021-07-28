@@ -7,10 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/database/es"
+	"github.com/kucjac/cleango/database/es/esstate"
 	"github.com/kucjac/cleango/database/es/esxsql"
-	"github.com/kucjac/cleango/database/es/eventstate"
 	"github.com/kucjac/cleango/database/xsql"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 )
 
 func testPostgresStateStore(t *testing.T) *esxsql.StateStorage {
@@ -31,7 +33,7 @@ func testPostgresStateStore(t *testing.T) *esxsql.StateStorage {
 	return s
 }
 
-func testStateTx(t *testing.T, s *esxsql.StateStorage) (eventstate.TxStorage, func()) {
+func testStateTx(t *testing.T, s *esxsql.StateStorage) (esstate.TxStorage, func()) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	tx, err := s.BeginTx(ctx)
 	if err != nil {
@@ -64,7 +66,12 @@ func TestPostgresStateStorage(t *testing.T) {
 	tx, cf := testStateTx(t, store)
 	defer cf()
 
-	err := tx.MarkUnhandled(ctx, &e1, &e2)
+	err := tx.MarkUnhandled(ctx, e1.EventId, e1.EventType, e1.Timestamp)
+	if err != nil {
+		t.Fatalf("marking unhandled failed: %v", err)
+	}
+
+	err = tx.MarkUnhandled(ctx, e2.EventId, e2.EventType, e2.Timestamp)
 	if err != nil {
 		t.Fatalf("marking unhandled failed: %v", err)
 	}
@@ -101,7 +108,7 @@ func TestPostgresStateStorage(t *testing.T) {
 		t.Fatalf("there should be exactly 3 unhandled events but is: %d", len(events))
 	}
 
-	err = tx.StartHandling(ctx, &e1, testHandler, now())
+	err = tx.StartHandling(ctx, e1.EventId, testHandler, now())
 	if err != nil {
 		t.Fatalf("starting handling failed: %v", err)
 	}
@@ -115,8 +122,30 @@ func TestPostgresStateStorage(t *testing.T) {
 		t.Fatalf("there should be only one unhandled event but is: %d", len(events))
 	}
 
-	err = tx.FinishHandling(ctx, &e1, testHandler, now())
+	err = tx.HandlingFailed(ctx, &eventstate.HandleFailure{
+		EventID:     e1.EventId,
+		HandlerName: testHandler,
+		Err:         "failed",
+		ErrCode:     cgerrors.ErrorCode_Internal,
+		RetryNo:     1,
+		Timestamp:   time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("handling failure failed: %v", err)
+	}
+
+	failed, err := tx.FindFailures(ctx, eventstate.FindFailureQuery{HandlerNames: []string{testHandler, testHandler2}})
+	if err != nil {
+		t.Fatalf("finding failures failed: %v", err)
+	}
+
+	if len(failed) != 1 {
+		t.Fatalf("there should be only one unhandled event but is: %d", len(failed))
+	}
+
+	err = tx.FinishHandling(ctx, e1.EventId, testHandler, now())
 	if err != nil {
 		t.Fatalf("finishing handling failed: %v", err)
 	}
+
 }

@@ -11,8 +11,8 @@ import (
 	"text/template"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/database/es/eventstate"
 	"github.com/kucjac/cleango/database/xsql"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 
 	"github.com/kucjac/cleango/xlog"
 )

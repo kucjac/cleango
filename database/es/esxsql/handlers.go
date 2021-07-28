@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/database/es/eventstate"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 )
 
 // RegisterHandlers implements eventstate.StorageBase.

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/kucjac/cleango/database/es/esxsql"
-	"github.com/kucjac/cleango/database/es/eventstate"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 )
 
 func TestMigrate(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/database/es/eventstate"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 )
 
 // Config is the configuration for the event storage.

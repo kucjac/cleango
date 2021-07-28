@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/database/es"
-	"github.com/kucjac/cleango/database/es/eventstate"
+	"github.com/kucjac/cleango/database/es/esstate"
 	"github.com/kucjac/cleango/database/xsql"
+	"github.com/kucjac/cleango/ddd/events/eventstate"
 	uuid "github.com/satori/go.uuid"
 )
 
 // Compile time check if StateStorage implements eventstate.Storage interface.
-var _ eventstate.Storage = (*StateStorage)(nil)
+var _ esstate.Storage = (*StateStorage)(nil)
 
 // StateStorage is the implementation of the eventstate.Storage interface.
 // It also implements es.StorageBase.
@@ -23,7 +23,7 @@ type StateStorage struct {
 }
 
 // BeginTx starts a new transaction.
-func (s *StateStorage) BeginTx(ctx context.Context) (eventstate.TxStorage, error) {
+func (s *StateStorage) BeginTx(ctx context.Context) (esstate.TxStorage, error) {
 	tx, _, err := s.getTx(ctx)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func NewStateStorage(conn *xsql.Conn, cfg *Config) (*StateStorage, error) {
 // Finds all unhandled event state matching given query.
 func (s *storage) FindUnhandled(ctx context.Context, query eventstate.FindUnhandledQuery) ([]eventstate.Unhandled, error) {
 	q := s.query.findHandlerEvents
-	args := []interface{}{eventstate.StateUnhandled}
+	args := []interface{}{esstate.StateUnhandled}
 	sb := strings.Builder{}
 	sb.WriteString(q)
 	sb.WriteString(" WHERE state = ?")
@@ -99,17 +99,15 @@ func (s *storage) FindUnhandled(ctx context.Context, query eventstate.FindUnhand
 
 	var result []eventstate.Unhandled
 	for rows.Next() {
-		e := &es.Event{}
-		var handlerName string
+		var eventID, handlerName string
 		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
 		err = rows.Scan(
-			&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData,
-			&handlerName,
+			&eventID, &handlerName,
 		)
 		if err != nil {
 			return nil, cgerrors.ErrInternalf("scanning  event row failed: %v", err.Error())
 		}
-		result = append(result, eventstate.Unhandled{Event: e, HandlerName: handlerName})
+		result = append(result, eventstate.Unhandled{EventID: eventID, HandlerName: handlerName})
 	}
 	if err = rows.Err(); err != nil {
 		if cgerrors.Is(err, sql.ErrNoRows) {
@@ -128,7 +126,8 @@ func (s *storage) FindFailures(ctx context.Context, query eventstate.FindFailure
 	if len(query.HandlerNames) != 0 {
 		sb := strings.Builder{}
 		sb.WriteString(q)
-		sb.WriteString(" AND es.handler_name IN (")
+		sb.WriteString(" WHERE ")
+		sb.WriteString("ef.handler_name IN (")
 		for i, hn := range query.HandlerNames {
 			sb.WriteRune('?')
 			if i < len(query.HandlerNames)-1 {
@@ -149,24 +148,21 @@ func (s *storage) FindFailures(ctx context.Context, query eventstate.FindFailure
 
 	var result []eventstate.HandleFailure
 	for rows.Next() {
-		e := &es.Event{}
 		var (
+			eventID     string
 			handlerName string
 			timestamp   int64
 			errMessage  string
 			errCode     int
 			retryNo     int
 		)
-		// aggregate_id, aggregate_type, revision, timestamp, event_id, event_type, event_data
-		err = rows.Scan(
-			&e.AggregateId, &e.AggregateType, &e.Revision, &e.Timestamp, &e.EventId, &e.EventType, &e.EventData,
-			&handlerName, &timestamp, &errMessage, &errCode, &retryNo,
-		)
+
+		err = rows.Scan(&eventID, &handlerName, &timestamp, &errMessage, &errCode, &retryNo)
 		if err != nil {
 			return nil, cgerrors.ErrInternalf("scanning  event row failed: %v", err.Error())
 		}
 		result = append(result, eventstate.HandleFailure{
-			Event:       e,
+			EventID:     eventID,
 			HandlerName: handlerName,
 			Err:         errMessage,
 			ErrCode:     cgerrors.ErrorCode(errCode),
@@ -185,22 +181,20 @@ func (s *storage) FindFailures(ctx context.Context, query eventstate.FindFailure
 }
 
 // MarkUnhandled implements eventstate.StorageBase.
-func (s *storage) MarkUnhandled(ctx context.Context, events ...*es.Event) error {
-	for _, e := range events {
-		q := s.query.insertEventState
-		_, err := s.conn.ExecContext(ctx, q, e.EventId, eventstate.StateUnhandled, e.Timestamp, e.EventType)
-		if err != nil {
-			return cgerrors.New("", "marking event unhandled failed", s.conn.ErrorCode(err)).
-				WithMeta("err", err.Error())
-		}
+func (s *storage) MarkUnhandled(ctx context.Context, eventID, eventType string, timestamp int64) error {
+	q := s.query.insertEventState
+	_, err := s.conn.ExecContext(ctx, q, eventID, esstate.StateUnhandled, timestamp, eventType)
+	if err != nil {
+		return cgerrors.New("", "marking event unhandled failed", s.conn.ErrorCode(err)).
+			WithMeta("err", err.Error())
 	}
 	return nil
 }
 
 // StartHandling implements eventstate.StorageBase.
-func (s *storage) StartHandling(ctx context.Context, e *es.Event, handlerName string, timestamp int64) error {
+func (s *storage) StartHandling(ctx context.Context, eventID string, handlerName string, timestamp int64) error {
 	q := s.query.updateEventState
-	_, err := s.conn.ExecContext(ctx, q, eventstate.StateStarted, timestamp, e.EventId, handlerName)
+	_, err := s.conn.ExecContext(ctx, q, esstate.StateStarted, timestamp, eventID, handlerName)
 	if err != nil {
 		return s.Err(err)
 	}
@@ -208,9 +202,9 @@ func (s *storage) StartHandling(ctx context.Context, e *es.Event, handlerName st
 }
 
 // FinishHandling implements eventstate.StorageBase.
-func (s *storage) FinishHandling(ctx context.Context, e *es.Event, handlerName string, timestamp int64) error {
+func (s *storage) FinishHandling(ctx context.Context, eventID string, handlerName string, timestamp int64) error {
 	q := s.query.updateEventState
-	_, err := s.conn.ExecContext(ctx, q, eventstate.StateFinished, timestamp, e.EventId, handlerName)
+	_, err := s.conn.ExecContext(ctx, q, esstate.StateFinished, timestamp, eventID, handlerName)
 	if err != nil {
 		return s.Err(err)
 	}
@@ -220,13 +214,13 @@ func (s *storage) FinishHandling(ctx context.Context, e *es.Event, handlerName s
 // HandlingFailed implements eventstate.StorageBase.
 func (s *storage) HandlingFailed(ctx context.Context, failure *eventstate.HandleFailure) error {
 	q := s.query.updateEventState
-	_, err := s.conn.ExecContext(ctx, q, eventstate.StateFailed, failure.Timestamp.UnixNano(), failure.Event.EventId, failure.HandlerName)
+	_, err := s.conn.ExecContext(ctx, q, esstate.StateFailed, failure.Timestamp.UnixNano(), failure.EventID, failure.HandlerName)
 	if err != nil {
 		return s.Err(err)
 	}
 
 	q = s.query.insertHandlingFailure
-	_, err = s.conn.ExecContext(ctx, q, failure.Event.EventId, failure.HandlerName, failure.Timestamp.UnixNano(), failure.Err, failure.ErrCode, failure.RetryNo)
+	_, err = s.conn.ExecContext(ctx, q, failure.EventID, failure.HandlerName, failure.Timestamp.UnixNano(), failure.Err, failure.ErrCode, failure.RetryNo)
 	if err != nil {
 		return s.Err(err)
 	}

@@ -30,14 +30,9 @@ SELECT ?,?,handler_name,?
 FROM %s AS h
 WHERE h.event_type = ?`
 	insertHandlingFailure = `INSERT INTO %s (event_id, handler_name, timestamp, error_message, error_code, retry_no) VALUES (?,?,?,?,?,?)`
-	findHandlerEvents     = `SELECT e.aggregate_id, e.aggregate_type, e.revision, e.timestamp, e.event_id, e.event_type, e.event_data, es.handler_name 
-FROM %s AS es  
-JOIN %s AS e ON es.event_id=e.event_id`
-	findHandlingFailures = `SELECT 
-	e.aggregate_id, e.aggregate_type, e.revision, e.timestamp, e.event_id, e.event_type, e.event_data, 
-	ef.handler_name, ef.timestamp, ef.error_message, ef.error_code, ef.retry_no 
-FROM %s AS ef 
-LEFT JOIN %s AS e ON ef.event_id=e.event_id`
+	findHandlerEvents     = `SELECT es.event_id, es.handler_name FROM %s AS es`
+	findHandlingFailures  = `SELECT ef.event_id, ef.handler_name, ef.timestamp, ef.error_message, ef.error_code, ef.retry_no 
+FROM %s AS ef`
 )
 
 type queries struct {
@@ -87,7 +82,7 @@ func newQueries(conn xsql.DB, c *Config) queries {
 		updateEventState:       conn.Rebind(fmt.Sprintf(updateEventState, c.eventStateTableName())),
 		insertEventState:       conn.Rebind(fmt.Sprintf(insertEventState, c.eventStateTableName(), c.handlerTableName())),
 		insertHandlingFailure:  conn.Rebind(fmt.Sprintf(insertHandlingFailure, c.eventHandleFailureTableName())),
-		findHandlerEvents:      conn.Rebind(fmt.Sprintf(findHandlerEvents, c.eventStateTableName(), c.eventTableName())),
-		findHandlingFailures:   conn.Rebind(fmt.Sprintf(findHandlingFailures, c.eventHandleFailureTableName(), c.eventTableName())),
+		findHandlerEvents:      conn.Rebind(fmt.Sprintf(findHandlerEvents, c.eventStateTableName())),
+		findHandlingFailures:   conn.Rebind(fmt.Sprintf(findHandlingFailures, c.eventHandleFailureTableName())),
 	}
 }
