@@ -1,10 +1,11 @@
-package eventstate
+package esstate
 
 import (
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/database/es"
+	eventstate2 "github.com/kucjac/cleango/ddd/events/eventstate"
 )
 
 // State is a state value for the event handling.
@@ -24,9 +25,9 @@ const (
 )
 
 // newEventHandleFailure creates a new event handling failure.
-func newEventHandleFailure(state *EventState, e *es.Event, err error, handlerName string) *HandleFailure {
-	return &HandleFailure{
-		Event:       e,
+func newEventHandleFailure(state *EventState, eventID string, err error, handlerName string) *eventstate2.HandleFailure {
+	return &eventstate2.HandleFailure{
+		EventID:     eventID,
 		Err:         err.Error(),
 		ErrCode:     cgerrors.Code(err),
 		HandlerName: handlerName,
@@ -77,15 +78,15 @@ func DefaultOptions() *Options {
 }
 
 // InitializeUnhandledEventState creates and initializes a new EventState model with an EventUnhandled message.
-func InitializeUnhandledEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) (*EventState, error) {
+func InitializeUnhandledEventState(eventID, eventType string, timestamp time.Time, bs *es.AggregateBaseSetter, o *Options) (*EventState, error) {
 	eh := &EventState{handlers: map[string]handles{}}
 	if o == nil {
 		o = DefaultOptions()
 	}
 
-	bs.SetAggregateBase(eh, e.EventId, AggregateType, 1)
+	bs.SetAggregateBase(eh, eventID, AggregateType, 1)
 
-	msg, err := newEventUnhandled(e.Timestamp, e.EventType, o.MaxFailures, o.MinFailInterval, o.MaxHandlingTime)
+	msg, err := newEventUnhandled(timestamp.UnixNano(), eventType, o.MaxFailures, o.MinFailInterval, o.MaxHandlingTime)
 	if err != nil {
 		return nil, err
 	}
@@ -96,12 +97,9 @@ func InitializeUnhandledEventState(e *es.Event, bs *es.AggregateBaseSetter, o *O
 }
 
 // NewEventState creates a new EventState aggregate model.
-func NewEventState(e *es.Event, bs *es.AggregateBaseSetter, o *Options) *EventState {
+func NewEventState(eventID string, bs *es.AggregateBaseSetter) *EventState {
 	eh := &EventState{handlers: map[string]handles{}}
-	if o == nil {
-		o = DefaultOptions()
-	}
-	bs.SetAggregateBase(eh, e.EventId, AggregateType, 1)
+	bs.SetAggregateBase(eh, eventID, AggregateType, 1)
 	return eh
 }
 

@@ -1,4 +1,4 @@
-package eventstate
+package esstate
 
 import (
 	"testing"
@@ -31,7 +31,7 @@ var (
 
 func TestEventState(t *testing.T) {
 	t.Run("Valid", func(t *testing.T) {
-		e, err := InitializeUnhandledEventState(&testEvent, bs, nil)
+		e, err := InitializeUnhandledEventState(testEvent.EventId, testEvent.EventType, testEvent.Time(), bs, nil)
 		if err != nil {
 			t.Fatalf("initialize event state failed: %v", err)
 		}
@@ -59,7 +59,7 @@ func TestEventState(t *testing.T) {
 	})
 
 	t.Run("DoubleHandling", func(t *testing.T) {
-		e, err := InitializeUnhandledEventState(&testEvent, bs, nil)
+		e, err := InitializeUnhandledEventState(testEvent.EventId, testEventType, testEvent.Time(), bs, nil)
 		if err != nil {
 			t.Fatalf("initialize event state failed: %v", err)
 		}
@@ -76,7 +76,7 @@ func TestEventState(t *testing.T) {
 	})
 
 	t.Run("StartAfterFinish", func(t *testing.T) {
-		e, err := InitializeUnhandledEventState(&testEvent, bs, nil)
+		e, err := InitializeUnhandledEventState(testEvent.EventId, testEventType, testEvent.Time(), bs, nil)
 		if err != nil {
 			t.Fatalf("initialize event state failed: %v", err)
 		}
@@ -98,7 +98,7 @@ func TestEventState(t *testing.T) {
 	})
 
 	t.Run("MultipleHandlers", func(t *testing.T) {
-		e, err := InitializeUnhandledEventState(&testEvent, bs, nil)
+		e, err := InitializeUnhandledEventState(testEvent.EventId, testEvent.EventType, testEvent.Time(), bs, nil)
 		if err != nil {
 			t.Fatalf("initialize event state failed: %v", err)
 		}
@@ -129,7 +129,7 @@ func TestEventState(t *testing.T) {
 		o.MinFailInterval = time.Millisecond
 		o.MaxFailures = 1
 
-		e, err := InitializeUnhandledEventState(&testEvent, bs, o)
+		e, err := InitializeUnhandledEventState(testEvent.EventId, testEvent.EventType, testEvent.Time(), bs, o)
 		if err != nil {
 			t.Fatalf("initialize event state failed: %v", err)
 		}

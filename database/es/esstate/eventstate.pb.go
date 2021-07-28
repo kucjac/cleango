@@ -4,7 +4,7 @@
 // 	protoc        v3.14.0
 // source: eventstate/eventstate.proto
 
-package eventstate
+package esstate
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

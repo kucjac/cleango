@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package eventstate;
 
-option go_package = "github.com/kucjac/cleango/database/es/eventstate";
+option go_package = "github.com/kucjac/cleango/database/es/esstate";
 
 // EventUnhandled is an event message which states that an event is marked as unhandled.
 message EventUnhandled {

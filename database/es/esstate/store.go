@@ -1,9 +1,10 @@
-package eventstate
+package esstate
 
 import (
 	"context"
 
 	"github.com/kucjac/cleango/database/es"
+	eventstate2 "github.com/kucjac/cleango/ddd/events/eventstate"
 	"github.com/kucjac/cleango/xlog"
 )
 
@@ -11,28 +12,6 @@ import (
 // allows to control the state of the event handling.
 type EventStore interface {
 	es.EventStore
-
-	// StartHandling starts handling given event by the handler with a name = handlerName.
-	StartHandling(ctx context.Context, e *es.Event, handlerName string) error
-
-	// FinishHandling finishes handling given event by the handlerName.
-	FinishHandling(ctx context.Context, e *es.Event, handlerName string) error
-
-	// HandlingFailed finishes handling given event by the handlerName.
-	HandlingFailed(ctx context.Context, e *es.Event, handlerName string, handleErr error) error
-
-	// RegisterHandlers registers the information about event handler.
-	// This function should be done during migration of the event handler.
-	RegisterHandlers(ctx context.Context, eventHandlers ...Handler) error
-
-	// ListHandlers list the handlers for the
-	ListHandlers(ctx context.Context) ([]Handler, error)
-
-	// FindUnhandled finds all unhandled events for given handler.
-	FindUnhandled(ctx context.Context, query FindUnhandledQuery) ([]Unhandled, error)
-
-	// FindFailures finds the handle failures for given handler name.
-	FindFailures(ctx context.Context, query FindFailureQuery) ([]HandleFailure, error)
 
 	// ChangeTypeOptions changes event type handling state options.
 	ChangeTypeOptions(eventType string, options *Options)
@@ -55,22 +34,22 @@ func (s *Store) ChangeTypeOptions(eventType string, options *Options) {
 
 // RegisterHandlers registers unique event handlers.
 // This function should be used on the event migration only once per service.
-func (s *Store) RegisterHandlers(ctx context.Context, eventHandlers ...Handler) error {
+func (s *Store) RegisterHandlers(ctx context.Context, eventHandlers ...eventstate2.Handler) error {
 	return s.storage.RegisterHandlers(ctx, eventHandlers...)
 }
 
 // ListHandlers list the handlers that matches given event type.
-func (s *Store) ListHandlers(ctx context.Context) ([]Handler, error) {
+func (s *Store) ListHandlers(ctx context.Context) ([]eventstate2.Handler, error) {
 	return s.storage.ListHandlers(ctx)
 }
 
-// FindUnhandled finds all unhandled events that matches given query.
-func (s *Store) FindUnhandled(ctx context.Context, query FindUnhandledQuery) ([]Unhandled, error) {
+// FindUnhandledEvents finds all unhandled events that matches given query.
+func (s *Store) FindUnhandledEvents(ctx context.Context, query eventstate2.FindUnhandledQuery) ([]eventstate2.Unhandled, error) {
 	return s.storage.FindUnhandled(ctx, query)
 }
 
-// FindFailures find all handling failures that matches given query.
-func (s *Store) FindFailures(ctx context.Context, query FindFailureQuery) ([]HandleFailure, error) {
+// FindEventHandleFailures find all handling failures that matches given query.
+func (s *Store) FindEventHandleFailures(ctx context.Context, query eventstate2.FindFailureQuery) ([]eventstate2.HandleFailure, error) {
 	return s.storage.FindFailures(ctx, query)
 }
 
@@ -101,10 +80,10 @@ func (s *Store) Commit(ctx context.Context, aggregate es.Aggregate) error {
 	events := aggregate.AggBase().CommittedEvents()
 	for _, e := range events {
 		// Check if there are some custom options for given event type.
-		options := s.getEventOptions(e)
+		options := s.getEventOptions(e.EventType)
 
 		// define new event state aggregate.
-		state, err := InitializeUnhandledEventState(e, s.Store.AggregateBaseSetter, options)
+		state, err := InitializeUnhandledEventState(e.EventId, e.EventType, e.Time(), s.Store.AggregateBaseSetter, options)
 		if err != nil {
 			if er := tx.Rollback(ctx); er != nil {
 				xlog.WithContext(ctx).
@@ -126,8 +105,10 @@ func (s *Store) Commit(ctx context.Context, aggregate es.Aggregate) error {
 	}
 
 	// Mark the events unhandled.
-	if err = tx.MarkUnhandled(ctx, events...); err != nil {
-		return err
+	for _, e := range events {
+		if err = tx.MarkUnhandled(ctx, e.EventId, e.EventType, e.Timestamp); err != nil {
+			return err
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return err
@@ -136,8 +117,8 @@ func (s *Store) Commit(ctx context.Context, aggregate es.Aggregate) error {
 }
 
 // StartHandling starts handling given event by the handler with a name = handlerName.
-func (s *Store) StartHandling(ctx context.Context, e *es.Event, handlerName string) error {
-	state := NewEventState(e, s.AggregateBaseSetter, s.getEventOptions(e))
+func (s *Store) StartHandling(ctx context.Context, eventID, handlerName string) error {
+	state := NewEventState(eventID, s.AggregateBaseSetter)
 
 	if err := s.LoadEvents(ctx, state); err != nil {
 		return err
@@ -151,15 +132,15 @@ func (s *Store) StartHandling(ctx context.Context, e *es.Event, handlerName stri
 		return err
 	}
 
-	if err := s.storage.StartHandling(ctx, e, handlerName, state.handlers[handlerName].lastStarted.UnixNano()); err != nil {
+	if err := s.storage.StartHandling(ctx, eventID, handlerName, state.handlers[handlerName].lastStarted.UnixNano()); err != nil {
 		return err
 	}
 	return nil
 }
 
 // FinishHandling finishes handling given event by the handlerName.
-func (s *Store) FinishHandling(ctx context.Context, e *es.Event, handlerName string) error {
-	state := NewEventState(e, s.AggregateBaseSetter, s.getEventOptions(e))
+func (s *Store) FinishHandling(ctx context.Context, eventID, handlerName string) error {
+	state := NewEventState(eventID, s.AggregateBaseSetter)
 
 	if err := s.LoadEvents(ctx, state); err != nil {
 		return err
@@ -173,16 +154,16 @@ func (s *Store) FinishHandling(ctx context.Context, e *es.Event, handlerName str
 		return err
 	}
 
-	if err := s.storage.FinishHandling(ctx, e, handlerName, state.handlers[handlerName].finishedAt.UnixNano()); err != nil {
+	if err := s.storage.FinishHandling(ctx, eventID, handlerName, state.handlers[handlerName].finishedAt.UnixNano()); err != nil {
 		return err
 	}
 	return nil
 }
 
 // HandlingFailed finishes handling given event by the handlerName.
-func (s *Store) HandlingFailed(ctx context.Context, e *es.Event, handlerName string, handleErr error) error {
+func (s *Store) HandlingFailed(ctx context.Context, eventID, handlerName string, handleErr error) error {
 	// Load up the event state.
-	state := NewEventState(e, s.AggregateBaseSetter, s.getEventOptions(e))
+	state := NewEventState(eventID, s.AggregateBaseSetter)
 	if err := s.LoadEvents(ctx, state); err != nil {
 		return err
 	}
@@ -198,7 +179,7 @@ func (s *Store) HandlingFailed(ctx context.Context, e *es.Event, handlerName str
 	}
 
 	// Create a failure for given event.
-	failure := newEventHandleFailure(state, e, handleErr, handlerName)
+	failure := newEventHandleFailure(state, eventID, handleErr, handlerName)
 
 	// Store the failure information in the storage.
 	if err := s.storage.HandlingFailed(ctx, failure); err != nil {
@@ -216,8 +197,8 @@ func NewStore(cfg *es.Config, eventCodec es.EventCodec, snapCodec es.SnapshotCod
 	return &Store{Store: eventStore, typeOptions: map[string]*Options{}, storage: storage}, nil
 }
 
-func (s *Store) getEventOptions(e *es.Event) *Options {
-	options := s.typeOptions[e.EventType]
+func (s *Store) getEventOptions(eventType string) *Options {
+	options := s.typeOptions[eventType]
 	if options == nil {
 		options = DefaultOptions()
 	}

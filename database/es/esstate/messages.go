@@ -1,4 +1,4 @@
-package eventstate
+package esstate
 
 import (
 	"time"
