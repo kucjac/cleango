@@ -93,6 +93,37 @@ func (a *AggregateBase) SetEvent(eventMsg EventMessage) error {
 	return nil
 }
 
+// NewEvent creates a new event with given identifier, at given timestamp and with given message.
+// An event is added to uncommitted events of the aggregate base.
+// NOTE: Created event is not applied to given aggregate base.
+func (a *AggregateBase) NewEvent(id string, msg EventMessage, timestamp time.Time) (*Event, error) {
+	eventData, err := a.eventCodec.Marshal(msg)
+	if err != nil {
+		return nil, err
+	}
+	if id == "" {
+		id = a.idGen.GenerateId()
+	}
+	if timestamp.IsZero() {
+		timestamp = time.Now().UTC()
+	}
+	revision := a.revision
+	e := &Event{
+		EventId:       id,
+		EventType:     msg.MessageType(),
+		AggregateType: a.aggType,
+		AggregateId:   a.id,
+		EventData:     eventData,
+		Timestamp:     timestamp.UnixNano(),
+		Revision:      revision + 1,
+	}
+
+	a.revision++
+	a.timestamp = e.Timestamp
+	a.uncommittedEvents = append(a.uncommittedEvents, e)
+	return e, nil
+}
+
 // CommittedEvents gets the committed event messages.
 func (a *AggregateBase) CommittedEvents() []*Event {
 	return a.committedEvents
