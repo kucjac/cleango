@@ -8,38 +8,8 @@ import (
 	_ "gocloud.dev/pubsub/natspubsub"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/metadata"
 	"github.com/kucjac/cleango/xpubsub"
 )
-
-// Compile time check if the MsgSubject is a xpubsub.Middleware.
-var _ xpubsub.Middleware = MsgSubject
-
-// MsgSubject is a xpubsub.Middleware that is extracting subject from the subscription message.
-func MsgSubject(next xpubsub.Handler) xpubsub.Handler {
-	return xpubsub.HandlerFunc(func(ctx context.Context, msg *pubsub.Message) error {
-		var natsMsg *nats.Msg
-		if !msg.As(&natsMsg) {
-			return cgerrors.ErrInternal("pubsub.Message.As returned failed").
-				WithMeta("msgId", msg.LoggableID)
-		}
-
-		// Get the metadata from the context.
-		meta, ok := metadata.FromContext(ctx)
-		if !ok {
-			meta = metadata.Meta{}
-			ctx = metadata.NewContext(ctx, meta)
-		}
-		// Store the subject in the metadata.
-		meta.Set(metadata.KeySubject, natsMsg.Subject)
-
-		// Handle the next handlers.
-		if err := next.Handle(ctx, msg); err != nil {
-			return err
-		}
-		return nil
-	})
-}
 
 // JetStreamMetadataCtxKey is the key to the JetStream Message metadata.
 type JetStreamMetadataCtxKey struct{}

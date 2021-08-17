@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/kucjac/cleango/codec"
-	"github.com/kucjac/cleango/metadata"
 	"github.com/kucjac/cleango/xlog"
 	"gocloud.dev/pubsub"
+	"google.golang.org/grpc/metadata"
 )
 
 //go:generate mockgen -destination=pubsubmock/topic_gen.go -package=pubsubmock . Topic
@@ -40,9 +40,14 @@ func (t *TopicPublisher) Publish(ctx context.Context, msg MessageTyper) error {
 
 	// Define the message.
 	m := pubsub.Message{Body: body}
-	meta, ok := metadata.FromContext(ctx)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		m.Metadata = meta
+		m.Metadata = map[string]string{}
+		for k, v := range md {
+			if len(v) != 0 {
+				m.Metadata[k] = v[0]
+			}
+		}
 	}
 
 	// Publish the message into given topic.

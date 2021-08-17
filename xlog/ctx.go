@@ -3,8 +3,9 @@ package xlog
 import (
 	"context"
 
-	"github.com/kucjac/cleango/metadata"
+	"github.com/kucjac/cleango/xmeta"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 )
 
 // CtxKey represents custom type for context
@@ -46,7 +47,11 @@ func (m RequestIDHook) Levels() []logrus.Level {
 }
 
 func (m RequestIDHook) Fire(entry *logrus.Entry) error {
-	rID, ok := metadata.RequestID(entry.Context)
+	md, ok := metadata.FromIncomingContext(entry.Context)
+	if !ok {
+		return nil
+	}
+	rID, ok := xmeta.RequestID(md)
 	if !ok {
 		return nil
 	}
@@ -64,7 +69,11 @@ func (u UserIDHook) Levels() []logrus.Level {
 }
 
 func (u UserIDHook) Fire(entry *logrus.Entry) error {
-	uID, ok := metadata.UserID(entry.Context)
+	md, ok := metadata.FromIncomingContext(entry.Context)
+	if !ok {
+		return nil
+	}
+	uID, ok := xmeta.UserID(md)
 	if !ok {
 		return nil
 	}

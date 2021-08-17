@@ -5,10 +5,10 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/kucjac/cleango/metadata"
 	"github.com/kucjac/cleango/xpubsub"
 	"github.com/sirupsen/logrus"
 	"gocloud.dev/pubsub"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/xlog"
@@ -136,7 +136,7 @@ func ContextMetadata(next xpubsub.Handler) xpubsub.Handler {
 		if md == nil {
 			md = map[string]string{}
 		}
-		ctx = metadata.MergeContext(ctx, md, true)
+		ctx = metadata.NewIncomingContext(ctx, metadata.New(md))
 		return next.Handle(ctx, m)
 	})
 }
