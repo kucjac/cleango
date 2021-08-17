@@ -15,6 +15,15 @@ var g = uniqueid.NextGenerator("errors")
 
 //go:generate protoc -I. --go_out=paths=source_relative:. errors.proto
 
+// FromString parses string error into an Error structure.
+func FromString(err string) (*Error, bool) {
+	var e Error
+	if er := json.Unmarshal([]byte(err), &e); er != nil {
+		return nil, false
+	}
+	return &e, true
+}
+
 // Error implements error interface.
 func (x *Error) Error() string {
 	b, _ := json.Marshal(x)
@@ -253,6 +262,16 @@ func ErrUnimplemented(a ...interface{}) *Error {
 // ErrUnimplementedf generates Unimplemented error with formatting.
 func ErrUnimplementedf(format string, a ...interface{}) *Error {
 	return newError(ErrorCode_Unimplemented, fmt.Sprintf(format, a...))
+}
+
+// ErrUnknown generates Unknown error.
+func ErrUnknown(a ...interface{}) *Error {
+	return newError(ErrorCode_Unknown, fmt.Sprint(a...))
+}
+
+// ErrUnknownf generates Unknown error with formatting.
+func ErrUnknownf(format string, a ...interface{}) *Error {
+	return newError(ErrorCode_Unknown, fmt.Sprintf(format, a...))
 }
 
 // Equal tries to compare errors
