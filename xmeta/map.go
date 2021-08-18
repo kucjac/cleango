@@ -11,13 +11,13 @@ import (
 
 // Constant metadata key definitions.
 const (
-	KeyAuthorization   = "__cg_authorization__"
-	KeyContentLanguage = "__cg_content_language__"
-	KeyAcceptLanguages = "__cg_accept_language__"
-	KeyCurrency        = "__cg_currency__"
-	KeyUserID          = "__cg_user_id__"
-	KeyRemoteIP        = "__cg_remote_ip__"
-	KeyRequestID       = "__cg_request_id__"
+	KeyAuthorization   = "authorization"
+	KeyContentLanguage = "content_language"
+	KeyAcceptLanguages = "accept_language"
+	KeyCurrency        = "currency"
+	KeyUserID          = "user_id"
+	KeyRemoteIP        = "remote_ip"
+	KeyRequestID       = "request_id"
 )
 
 // SetUserID sets up user id in the metadata.
