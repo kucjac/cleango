@@ -303,10 +303,10 @@ func FromError(err error) *Error {
 	if verr, ok := err.(*Error); ok && verr != nil {
 		return verr
 	}
-	if c := Code(err); c != ErrorCode_Unknown {
-		return newError(c, err.Error())
+	if e, ok := FromString(err.Error()); ok {
+		return e
 	}
-	return Parse(err.Error())
+	return newError(Code(err), err.Error())
 }
 
 func (x *Error) setDefaultID() {
