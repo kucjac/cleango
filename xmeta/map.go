@@ -2,6 +2,7 @@
 package xmeta
 
 import (
+	"context"
 	"net"
 
 	"golang.org/x/text/currency"
@@ -20,6 +21,25 @@ const (
 	KeyRequestID       = "request_id"
 )
 
+// IncomingCtxUserID gets the UserID from the incoming context.
+func IncomingCtxUserID(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	return getKey(md, KeyUserID)
+}
+
+// IncomingCtxSetUserID sets up UserID in the incoming context metadata.
+func IncomingCtxSetUserID(ctx context.Context, userID string) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetUserID(md, userID)
+	return metadata.NewIncomingContext(ctx, md)
+}
+
 // SetUserID sets up user id in the metadata.
 func SetUserID(md metadata.MD, userID string) {
 	md.Set(KeyUserID, userID)
@@ -34,14 +54,72 @@ func UserID(md metadata.MD) (string, bool) {
 	return u[0], true
 }
 
+// IncomingCtxRemoteIP gets the RemoteIP from the incoming context.
+func IncomingCtxRemoteIP(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	return getKey(md, KeyRemoteIP)
+}
+
+// IncomingCtxSetRemoteIP sets up RemoteIP in the incoming context metadata.
+func IncomingCtxSetRemoteIP(ctx context.Context, remoteIP net.IP) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetRemoteIP(md, remoteIP)
+	return metadata.NewIncomingContext(ctx, md)
+}
+
 // SetRemoteIP sets the remoteIP in the metadata.
 func SetRemoteIP(md metadata.MD, remoteIP net.IP) {
 	md.Set(KeyRemoteIP, remoteIP.String())
 }
 
+// IncomingCtxRequestID gets the RequestID from the incoming context.
+func IncomingCtxRequestID(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	return getKey(md, KeyRequestID)
+}
+
+// IncomingCtxSetRequestID sets up RequestID in the incoming context metadata.
+func IncomingCtxSetRequestID(ctx context.Context, requestID string) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetRequestID(md, requestID)
+	return metadata.NewIncomingContext(ctx, md)
+}
+
 // SetRequestID sets the request id in the metadata.
 func SetRequestID(md metadata.MD, requestID string) {
 	md.Set(KeyRequestID, requestID)
+}
+
+// IncomingCtxAuthorization gets the Authorization from the incoming context.
+func IncomingCtxAuthorization(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	return getKey(md, KeyAuthorization)
+}
+
+// IncomingCtxSetAuthorization sets up Authorization in the incoming context metadata.
+func IncomingCtxSetAuthorization(ctx context.Context, auth string) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetAuthorization(md, auth)
+	return metadata.NewIncomingContext(ctx, md)
+
 }
 
 // SetAuthorization sets the token in the metadata context.
@@ -67,6 +145,25 @@ func AcceptLanguages(md metadata.MD) ([]language.Tag, bool) {
 		tags = append(tags, tag)
 	}
 	return tags, true
+}
+
+// IncomingCtxAcceptLanguages gets the AcceptLanguages from the incoming context.
+func IncomingCtxAcceptLanguages(ctx context.Context) ([]language.Tag, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, false
+	}
+	return AcceptLanguages(md)
+}
+
+// IncomingCtxSetAcceptLanguages sets up AcceptLanguages in the incoming context metadata.
+func IncomingCtxSetAcceptLanguages(ctx context.Context, tags []language.Tag) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetAcceptLanguages(md, tags)
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 // SetAcceptLanguages sets up accept languages in the metadata.
@@ -97,6 +194,25 @@ func ContentLanguage(md metadata.MD) (language.Tag, bool) {
 	return tag, true
 }
 
+// IncomingCtxContentLanguage gets the ContentLanguage from the incoming context.
+func IncomingCtxContentLanguage(ctx context.Context) (language.Tag, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return language.Tag{}, false
+	}
+	return ContentLanguage(md)
+}
+
+// IncomingCtxSetContentLanguage sets up ContentLanguage in the incoming context metadata.
+func IncomingCtxSetContentLanguage(ctx context.Context, tag language.Tag) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetContentLanguage(md, tag)
+	return metadata.NewIncomingContext(ctx, md)
+}
+
 // SetContentLanguage sets the content language in the context.
 func SetContentLanguage(md metadata.MD, tag language.Tag) {
 	md.Set(KeyContentLanguage, tag.String())
@@ -116,6 +232,25 @@ func Currency(md metadata.MD) (currency.Unit, bool) {
 		return currency.Unit{}, false
 	}
 	return u, true
+}
+
+// IncomingCtxCurrency gets the Currency from the incoming context.
+func IncomingCtxCurrency(ctx context.Context) (currency.Unit, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return currency.Unit{}, false
+	}
+	return Currency(md)
+}
+
+// IncomingCtxSetCurrency sets up Currency in the incoming context metadata.
+func IncomingCtxSetCurrency(ctx context.Context, c currency.Unit) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	SetCurrency(md, c)
+	return metadata.NewIncomingContext(ctx, md)
 }
 
 // SetCurrency sets up given currency in the metadata.
