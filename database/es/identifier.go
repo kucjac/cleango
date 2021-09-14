@@ -1,7 +1,7 @@
 package es
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 // IdGenerator is the interface used by identity generators.
@@ -15,5 +15,5 @@ type UUIDGenerator struct{}
 // GenerateId generates identified.
 // Implements IdGenerator interface.
 func (u UUIDGenerator) GenerateId() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }
