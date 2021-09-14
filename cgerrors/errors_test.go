@@ -38,14 +38,14 @@ func TestEqual(t *testing.T) {
 func TestErrors(t *testing.T) {
 	testData := []*Error{
 		{
-			Id:     "test",
+			ID:     "test",
 			Code:   ErrorCode_Internal,
 			Detail: "Internal error",
 		},
 	}
 
 	for _, e := range testData {
-		ne := New(e.Id, e.Detail, e.Code)
+		ne := New(e.ID, e.Detail, e.Code)
 
 		if e.Error() != ne.Error() {
 			t.Fatalf("Expected %s got %s", e.Error(), ne.Error())
@@ -57,8 +57,8 @@ func TestErrors(t *testing.T) {
 			t.Fatalf("Expected error got nil %v", pe)
 		}
 
-		if pe.Id != e.Id {
-			t.Fatalf("Expected %s got %s", e.Id, pe.Id)
+		if pe.ID != e.ID {
+			t.Fatalf("Expected %s got %s", e.ID, pe.ID)
 		}
 
 		if pe.Detail != e.Detail {

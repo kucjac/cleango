@@ -5,6 +5,32 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+//go:generate stringer -output codes_string.go -trimprefix ErrorCode_ -type ErrorCode
+
+// ErrorCode is a code that defines errors specification.
+type ErrorCode int32
+
+// ErrorCode well known codes.
+const (
+	ErrorCode_OK                 ErrorCode = 0
+	ErrorCode_Canceled           ErrorCode = 1
+	ErrorCode_Unknown            ErrorCode = 2
+	ErrorCode_InvalidArgument    ErrorCode = 3
+	ErrorCode_DeadlineExceeded   ErrorCode = 4
+	ErrorCode_NotFound           ErrorCode = 5
+	ErrorCode_AlreadyExists      ErrorCode = 6
+	ErrorCode_PermissionDenied   ErrorCode = 7
+	ErrorCode_ResourceExhausted  ErrorCode = 8
+	ErrorCode_FailedPrecondition ErrorCode = 9
+	ErrorCode_Aborted            ErrorCode = 10
+	ErrorCode_OutOfRange         ErrorCode = 11
+	ErrorCode_Unimplemented      ErrorCode = 12
+	ErrorCode_Internal           ErrorCode = 13
+	ErrorCode_Unavailable        ErrorCode = 14
+	ErrorCode_DataLoss           ErrorCode = 15
+	ErrorCode_Unauthenticated    ErrorCode = 16
+)
+
 // ErrorCoder is an interface used to obtain an error code from given error within given implementation.
 type ErrorCoder interface {
 	ErrorCode(err error) ErrorCode
@@ -22,8 +48,8 @@ func Code(err error) ErrorCode {
 }
 
 // ToGRPCCode gets the related grpc code.
-func (x ErrorCode) ToGRPCCode() codes.Code {
-	switch x {
+func (c ErrorCode) ToGRPCCode() codes.Code {
+	switch c {
 	case ErrorCode_OK:
 		return codes.OK
 	case ErrorCode_Canceled:
