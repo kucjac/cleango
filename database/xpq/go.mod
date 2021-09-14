@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/kucjac/cleango v0.0.24
-	github.com/lib/pq v1.10.2
+	github.com/lib/pq v1.10.3
 )
 
 replace github.com/kucjac/cleango => ../../

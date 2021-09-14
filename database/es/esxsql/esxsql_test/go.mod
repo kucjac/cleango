@@ -7,7 +7,7 @@ require (
 	github.com/kucjac/cleango/database/es/esxsql v0.0.24
 	github.com/kucjac/cleango/database/xpq v0.0.24
 	github.com/kucjac/cleango/database/xsql v0.0.24
-	github.com/lib/pq v1.10.2
+	github.com/lib/pq v1.10.3
 )
 
 replace github.com/kucjac/cleango => ../../../../
