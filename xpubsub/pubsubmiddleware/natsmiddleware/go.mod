@@ -8,3 +8,5 @@ require (
 	gocloud.dev v0.24.0
 	gocloud.dev/pubsub/natspubsub v0.24.0
 )
+
+replace github.com/kucjac/cleango => ../../../
