@@ -71,6 +71,9 @@ func (m *MySQLDriver) CanRetry(err error) bool {
 func (m *MySQLDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	mySQLErr, ok := err.(*mysql.MySQLError)
 	if !ok {
+		if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+			return code
+		}
 		// Otherwise check if it sql.Err* or other errors from mysql package
 		switch err {
 		case mysql.ErrInvalidConn, mysql.ErrNoTLS, mysql.ErrOldProtocol,

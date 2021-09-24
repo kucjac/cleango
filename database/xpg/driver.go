@@ -1,6 +1,7 @@
 package xpg
 
 import (
+	"errors"
 	"net"
 
 	"github.com/go-pg/pg/v10"
@@ -39,12 +40,16 @@ func (p *PGDriver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
 
 // ErrorCode implements xservice.Driver interface.
 func (p *PGDriver) ErrorCode(err error) cgerrors.ErrorCode {
-	switch err {
-	case pg.ErrNoRows:
+	if errors.Is(err, pg.ErrNoRows) {
 		return cgerrors.ErrorCode_NotFound
-	case pg.ErrMultiRows, pg.ErrTxDone:
+	}
+	if errors.Is(err, pg.ErrMultiRows) {
 		return cgerrors.ErrorCode_Internal
 	}
+	if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+		return code
+	}
+
 	e, ok := err.(pg.Error)
 	if !ok {
 		return cgerrors.ErrorCode_Unknown

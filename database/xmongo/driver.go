@@ -33,6 +33,7 @@ func (d Driver) Err(err error) error {
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return cgerrors.ErrNotFound(err.Error())
 	}
+
 	return cgerrors.ErrUnknown(err)
 }
 
@@ -55,6 +56,10 @@ func (d Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	}
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return cgerrors.ErrorCode_NotFound
+	}
+
+	if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+		return code
 	}
 	return cgerrors.ErrorCode_Unknown
 }

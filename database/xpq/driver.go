@@ -2,6 +2,7 @@ package xpq
 
 import (
 	"database/sql"
+	"errors"
 	"net"
 
 	"github.com/kucjac/cleango/cgerrors"
@@ -46,12 +47,17 @@ func (d *Driver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
 
 // ErrorCode implements xservice.Driver interface.
 func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
-	switch err {
-	case sql.ErrNoRows:
+	if errors.Is(err, sql.ErrNoRows) {
 		return cgerrors.ErrorCode_NotFound
-	case sql.ErrConnDone, sql.ErrTxDone:
-		return cgerrors.ErrorCode_Internal
 	}
+	if errors.Is(err, sql.ErrConnDone) || errors.Is(err, sql.ErrTxDone) {
+		return cgerrors.ErrorCode_Unavailable
+	}
+
+	if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+		return code
+	}
+
 	e, ok := err.(*pq.Error)
 	if !ok {
 		return cgerrors.ErrorCode_Unknown
