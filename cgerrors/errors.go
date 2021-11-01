@@ -11,6 +11,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// MetaKeyWrapped adds the error metadata key that keeps the wrapped error value.
+const MetaKeyWrapped = "x-wrapped"
+
 // Error is the error message that has id, it's code and a detail.
 type Error struct {
 	ID      string            `json:"id,omitempty"`
@@ -34,13 +37,22 @@ func (e *Error) Unwrap() error {
 
 // Error implements error interface.
 func (e *Error) Error() string {
-	data, _ := json.Marshal(e)
+	temp := *e
+
+	if e.wrapped != nil {
+		meta := map[string]string{}
+		for k, v := range e.Meta {
+			meta[k] = v
+		}
+		meta[MetaKeyWrapped] = e.wrapped.Error()
+		temp.Meta = meta
+	}
+
+	data, _ := json.Marshal(temp)
 	return string(data)
 }
 
 var g = uniqueid.NextGenerator("errors")
-
-//go:generate protoc -I. --go_out=paths=source_relative:. pb/errors.proto
 
 // FromString parses string error into an Error structure.
 func FromString(err string) (*Error, bool) {
@@ -98,62 +110,62 @@ func Is(err, target error) bool {
 // To type check if given error is of *Error type or has encoded ErrorCode in it.
 // Otherwise creates a new error with Unknown code.
 func To(err error) *Error {
-	if e, ok := err.(*Error); ok && e != nil {
+	var e *Error
+	if errors.As(err, &e) {
 		return e
 	}
-	if c := Code(err); c != ErrorCode_Unknown {
+	if c := Code(err); c != CodeUnknown {
 		return newError(c, err.Error())
 	}
 
-	e := new(Error)
+	e = new(Error)
 	es := err.Error()
-	errr := json.Unmarshal([]byte(es), e)
-	if errr != nil {
+	if err := json.Unmarshal([]byte(es), e); err == nil {
 		e.Detail = es
 	} else {
-		e.Code = ErrorCode_Unknown
+		e.Code = CodeUnknown
 	}
 	return e
 }
 
 // IsNotFound checks if given input error is of code NotFound.
 func IsNotFound(err error) bool {
-	return Code(err) == ErrorCode_NotFound
+	return Code(err) == CodeNotFound
 }
 
 // IsAlreadyExists checks if given error means that given entity already exists.
 func IsAlreadyExists(err error) bool {
-	return Code(err) == ErrorCode_AlreadyExists
+	return Code(err) == CodeAlreadyExists
 }
 
 // IsInvalidArgument checks if given error means that given entity already exists.
 func IsInvalidArgument(err error) bool {
-	return Code(err) == ErrorCode_InvalidArgument
+	return Code(err) == CodeInvalidArgument
 }
 
 // IsDeadlineExceeded checks if given error is of type Deadline Exceeded.
 func IsDeadlineExceeded(err error) bool {
-	return Code(err) == ErrorCode_Internal
+	return Code(err) == CodeInternal
 }
 
 // IsUnauthenticated checks if given error is an unauthenticated error.
 func IsUnauthenticated(err error) bool {
-	return Code(err) == ErrorCode_Unauthenticated
+	return Code(err) == CodeUnauthenticated
 }
 
 // IsInternal checks if the input is an internal error.
 func IsInternal(err error) bool {
-	return Code(err) == ErrorCode_Internal
+	return Code(err) == CodeInternal
 }
 
 // IsPermissionDenied checks if given error is of type PermissionDenied.
 func IsPermissionDenied(err error) bool {
-	return Code(err) == ErrorCode_PermissionDenied
+	return Code(err) == CodePermissionDenied
 }
 
 // IsUnimplemented checks if given error contains Unimplemented  code.
 func IsUnimplemented(err error) bool {
-	return Code(err) == ErrorCode_Unimplemented
+	return Code(err) == CodeUnimplemented
 }
 
 // New generates a custom error.
@@ -206,125 +218,135 @@ func Wrapf(err error, code ErrorCode, format string, args ...interface{}) *Error
 
 // ErrInvalidArgument generates a 400 error.
 func ErrInvalidArgument(a ...interface{}) *Error {
-	return newError(ErrorCode_InvalidArgument, fmt.Sprint(a...))
+	return newError(CodeInvalidArgument, fmt.Sprint(a...))
 }
 
 // ErrInvalidArgumentf generates formatted 400 error.
 func ErrInvalidArgumentf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_InvalidArgument, fmt.Sprintf(format, a...))
+	return newError(CodeInvalidArgument, fmt.Sprintf(format, a...))
 }
 
 // ErrFailedPrecondition generates a 400 error.
 func ErrFailedPrecondition(a ...interface{}) *Error {
-	return newError(ErrorCode_FailedPrecondition, fmt.Sprint(a...))
+	return newError(CodeFailedPrecondition, fmt.Sprint(a...))
 }
 
 // ErrFailedPreconditionf generates a 400 error.
 func ErrFailedPreconditionf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_FailedPrecondition, fmt.Sprintf(format, a...))
+	return newError(CodeFailedPrecondition, fmt.Sprintf(format, a...))
 }
 
 // ErrUnauthenticated generates a 401 error.
 func ErrUnauthenticated(a ...interface{}) *Error {
-	return newError(ErrorCode_Unauthenticated, fmt.Sprint(a...))
+	return newError(CodeUnauthenticated, fmt.Sprint(a...))
 }
 
 // ErrUnauthenticatedf generates 401 error with formatted message.
 func ErrUnauthenticatedf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_Unauthenticated, fmt.Sprintf(format, a...))
+	return newError(CodeUnauthenticated, fmt.Sprintf(format, a...))
 }
 
 // ErrPermissionDenied generates a 403 error.
 func ErrPermissionDenied(a ...interface{}) *Error {
-	return newError(ErrorCode_PermissionDenied, fmt.Sprint(a...))
+	return newError(CodePermissionDenied, fmt.Sprint(a...))
 }
 
 // ErrPermissionDeniedf generates a 403 error.
 func ErrPermissionDeniedf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_PermissionDenied, fmt.Sprintf(format, a...))
+	return newError(CodePermissionDenied, fmt.Sprintf(format, a...))
 }
 
 // ErrNotFound generates a 404 error.
 func ErrNotFound(a ...interface{}) *Error {
-	return newError(ErrorCode_NotFound, fmt.Sprint(a...))
+	return newError(CodeNotFound, fmt.Sprint(a...))
 }
 
 // ErrNotFoundf generates formatted 404 error.
 func ErrNotFoundf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_NotFound, fmt.Sprintf(format, a...))
+	return newError(CodeNotFound, fmt.Sprintf(format, a...))
 }
 
 // ErrDeadlineExceeded generates a 408 error.
 func ErrDeadlineExceeded(a ...interface{}) *Error {
-	return newError(ErrorCode_DeadlineExceeded, fmt.Sprint(a...))
+	return newError(CodeDeadlineExceeded, fmt.Sprint(a...))
 }
 
 // ErrDeadlineExceededf generates formatted 408 error.
 func ErrDeadlineExceededf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_DeadlineExceeded, fmt.Sprintf(format, a...))
+	return newError(CodeDeadlineExceeded, fmt.Sprintf(format, a...))
 }
 
 // ErrAlreadyExists generates a 409 error.
 func ErrAlreadyExists(a ...interface{}) *Error {
-	return newError(ErrorCode_AlreadyExists, fmt.Sprint(a...))
+	return newError(CodeAlreadyExists, fmt.Sprint(a...))
 }
 
 // ErrAlreadyExistsf generates formatted 409 error.
 func ErrAlreadyExistsf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_AlreadyExists, fmt.Sprintf(format, a...))
+	return newError(CodeAlreadyExists, fmt.Sprintf(format, a...))
 }
 
 // ErrInternal generates a 500 error.
 func ErrInternal(a ...interface{}) *Error {
-	return newError(ErrorCode_Internal, fmt.Sprint(a...))
+	return newError(CodeInternal, fmt.Sprint(a...))
 }
 
 // ErrInternalf generates formatted 500 error.
 func ErrInternalf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_Internal, fmt.Sprintf(format, a...))
+	return newError(CodeInternal, fmt.Sprintf(format, a...))
 }
 
 // ErrUnimplemented generates Unimplemented error.
 func ErrUnimplemented(a ...interface{}) *Error {
-	return newError(ErrorCode_Unimplemented, fmt.Sprint(a...))
+	return newError(CodeUnimplemented, fmt.Sprint(a...))
 }
 
 // ErrUnimplementedf generates Unimplemented error with formatting.
 func ErrUnimplementedf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_Unimplemented, fmt.Sprintf(format, a...))
+	return newError(CodeUnimplemented, fmt.Sprintf(format, a...))
 }
 
 // ErrUnavailable generates Unavailable error.
 func ErrUnavailable(a ...interface{}) *Error {
-	return newError(ErrorCode_Unavailable, fmt.Sprint(a...))
+	return newError(CodeUnavailable, fmt.Sprint(a...))
 }
 
 // ErrUnavailablef generates Unavailable error with formatting.
 func ErrUnavailablef(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_Unavailable, fmt.Sprintf(format, a...))
+	return newError(CodeUnavailable, fmt.Sprintf(format, a...))
 }
 
 // ErrUnknown generates Unknown error.
 func ErrUnknown(a ...interface{}) *Error {
-	return newError(ErrorCode_Unknown, fmt.Sprint(a...))
+	return newError(CodeUnknown, fmt.Sprint(a...))
 }
 
 // ErrUnknownf generates Unknown error with formatting.
 func ErrUnknownf(format string, a ...interface{}) *Error {
-	return newError(ErrorCode_Unknown, fmt.Sprintf(format, a...))
+	return newError(CodeUnknown, fmt.Sprintf(format, a...))
+}
+
+// ErrOutOfRange generates an error with the CodeOutOfRange.
+func ErrOutOfRange(a ...interface{}) *Error {
+	return newError(CodeOutOfRange, fmt.Sprint(a...))
+}
+
+// ErrOutOfRangef generates formatted error with the CodeOutOfRange.
+func ErrOutOfRangef(format string, a ...interface{}) *Error {
+	return newError(CodeOutOfRange, fmt.Sprintf(format, a...))
 }
 
 // Equal tries to compare errors
 func Equal(err1 error, err2 error) bool {
-	verr1, ok1 := err1.(*Error)
-	verr2, ok2 := err2.(*Error)
+	var verr1, verr2 *Error
+	ok1 := errors.As(err1, &verr1)
+	ok2 := errors.As(err2, &verr2)
 
 	if ok1 != ok2 {
 		return false
 	}
-
 	if !ok1 {
-		return err1 == err2
+		return verr1 == verr2
 	}
 
 	if verr1.Code != verr2.Code {
@@ -340,9 +362,11 @@ func Equal(err1 error, err2 error) bool {
 
 // FromError try to convert go error to *Error
 func FromError(err error) *Error {
-	if verr, ok := err.(*Error); ok && verr != nil {
-		return verr
+	var vErr *Error
+	if errors.As(err, &vErr) {
+		return vErr
 	}
+
 	if e, ok := FromString(err.Error()); ok {
 		return e
 	}
