@@ -10,6 +10,10 @@ rebuild-errors-proto:
 	@protoc -I=. --go-grpc_out=. --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_opt=paths=source_relative es/event.proto
 
+rebuild-codec-internal-proto:
+	@echo "Rebuilding codec/internal/pb/codec.proto..."
+	@protoc -I=. --go_out=. --go_opt=paths=source_relative codec/internal/pb/codec.proto
+
 
 add-module-replaces:
 	@echo "Adding module replaces..."

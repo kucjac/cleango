@@ -13,6 +13,11 @@ var _ Codec = (*jsonCodec)(nil)
 
 type jsonCodec struct{}
 
+// Name implements Codec interface.
+func (j *jsonCodec) Name() string {
+	return "json"
+}
+
 // Marshal implements codec.Marshaler interface.
 func (j *jsonCodec) Marshal(input interface{}) ([]byte, error) {
 	return json.Marshal(input)

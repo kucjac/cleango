@@ -25,6 +25,11 @@ type ProtoUnmarshaler interface {
 
 type protoCodec struct{}
 
+// Name gets the name of the protobuf codec.
+func (j *protoCodec) Name() string {
+	return "protobuf"
+}
+
 // Marshal implements codec.Marshaler interface.
 func (j *protoCodec) Marshal(input interface{}) ([]byte, error) {
 	if mp, ok := input.(ProtoMarshaler); ok {

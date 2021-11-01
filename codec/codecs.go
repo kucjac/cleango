@@ -9,6 +9,7 @@ type Codec interface {
 	Marshal(interface{}) ([]byte, error)
 	Unmarshal([]byte, interface{}) error
 	Encoding() string
+	Name() string
 }
 
 var codecMap = map[string]Codec{

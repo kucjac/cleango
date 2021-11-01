@@ -14,6 +14,11 @@ var _ Codec = (*gobCodec)(nil)
 
 type gobCodec struct{}
 
+// Name gets the name of the codec.
+func (j *gobCodec) Name() string {
+	return "gob"
+}
+
 // Marshal implements codec.Marshaler interface.
 func (j *gobCodec) Marshal(input interface{}) ([]byte, error) {
 	var buf bytes.Buffer
