@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/kucjac/cleango/database/xsql"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/kucjac/cleango/cgerrors"

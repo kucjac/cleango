@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/kucjac/cleango/codec"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // Projection is an interface used to represent the query projeciton.

@@ -14,7 +14,7 @@ import (
 	"github.com/kucjac/cleango/database/xsql"
 	"github.com/kucjac/cleango/ddd/events/eventstate"
 
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 //go:embed mysql.tmpl

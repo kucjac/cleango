@@ -5,7 +5,7 @@ import (
 
 	"github.com/kucjac/cleango/database/es"
 	eventstate2 "github.com/kucjac/cleango/ddd/events/eventstate"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // EventStore is an interface that allows to operate on top of the standard es.EventStore, but also

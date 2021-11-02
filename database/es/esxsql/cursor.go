@@ -6,7 +6,7 @@ import (
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/database/xsql"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 
 	eventsource "github.com/kucjac/cleango/database/es"
 )

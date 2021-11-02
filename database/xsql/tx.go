@@ -8,7 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/database"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // RunInTransaction executes given function based on provided 'db' within a transaction.

@@ -3,7 +3,7 @@ package xlog
 import (
 	"context"
 
-	"github.com/kucjac/cleango/xmeta"
+	"github.com/kucjac/cleango/pkg/xmeta"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/metadata"
 )

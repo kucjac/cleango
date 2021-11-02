@@ -4,10 +4,10 @@ import (
 	"context"
 	"net"
 
+	"github.com/kucjac/cleango/pkg/xlog"
 	"google.golang.org/grpc"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
 	"github.com/kucjac/cleango/xservice"
 )
 

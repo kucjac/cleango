@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // RunService runs the service and locks the thread while running given service.

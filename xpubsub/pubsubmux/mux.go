@@ -6,7 +6,7 @@ import (
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/internal/uniqueid"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 	"github.com/kucjac/cleango/xpubsub"
 	"github.com/kucjac/cleango/xservice"
 	"github.com/sirupsen/logrus"

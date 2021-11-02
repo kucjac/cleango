@@ -7,7 +7,7 @@ import (
 	"encoding/gob"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // Cursors is the structure that contains all the page cursors.

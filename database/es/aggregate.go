@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/codec"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // AggregateFactory is a factory interface used to create new Aggregate models.

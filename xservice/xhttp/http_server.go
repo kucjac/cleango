@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 	"github.com/kucjac/cleango/xservice"
 )
 

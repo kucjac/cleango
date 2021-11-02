@@ -9,7 +9,7 @@ import (
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/database"
 	"github.com/kucjac/cleango/internal/uniqueid"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 var txIdGen = uniqueid.NextBaseGenerator("xsql")

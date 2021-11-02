@@ -7,7 +7,7 @@ import (
 
 	"github.com/kucjac/cleango/database/es"
 	"github.com/kucjac/cleango/database/xsql"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 type streamEventsCursor struct {

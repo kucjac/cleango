@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-pg/pg/v10"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 var spaceReg = regexp.MustCompile(`\s+`)

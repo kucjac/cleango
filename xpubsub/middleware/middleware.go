@@ -6,14 +6,13 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/kucjac/cleango/pkg/xlog"
 	"github.com/kucjac/cleango/xpubsub"
 	"github.com/sirupsen/logrus"
 	"gocloud.dev/pubsub"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
-
 	"github.com/kucjac/cleango/internal/uniqueid"
 )
 

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 // New creates a new service implementation that allows to add sub runners (ports).

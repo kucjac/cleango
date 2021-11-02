@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/kucjac/cleango/codec"
-	"github.com/kucjac/cleango/xlog"
+	"github.com/kucjac/cleango/pkg/xlog"
 )
 
 type loader struct {
