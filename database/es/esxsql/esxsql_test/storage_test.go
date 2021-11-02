@@ -164,7 +164,7 @@ func TestPostgresEvents(t *testing.T) {
 		if err == nil {
 			t.Error("saving single duplicated event should fail")
 		} else {
-			if tx.ErrorCode(err) != cgerrors.ErrorCode_AlreadyExists {
+			if tx.ErrorCode(err) != cgerrors.CodeAlreadyExists {
 				t.Errorf("saving single duplicated event should return error of type AlreadyExists but is: %v", err)
 			}
 		}
@@ -234,7 +234,7 @@ func TestPostgresSnapshots(t *testing.T) {
 		if err == nil {
 			t.Error("expected error already exists on saving duplicated snapshot")
 		} else {
-			if code := tx.ErrorCode(err); code != cgerrors.ErrorCode_AlreadyExists {
+			if code := tx.ErrorCode(err); code != cgerrors.CodeAlreadyExists {
 				t.Errorf("expected error already exists on saving duplicated snapshot, but got: %v, %v", code.String(), err)
 			}
 		}

@@ -41,33 +41,33 @@ func (p *PGDriver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
 // ErrorCode implements xservice.Driver interface.
 func (p *PGDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	if errors.Is(err, pg.ErrNoRows) {
-		return cgerrors.ErrorCode_NotFound
+		return cgerrors.CodeNotFound
 	}
 	if errors.Is(err, pg.ErrMultiRows) {
-		return cgerrors.ErrorCode_Internal
+		return cgerrors.CodeInternal
 	}
-	if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+	if code := cgerrors.Code(err); code != cgerrors.CodeUnknown {
 		return code
 	}
 
 	e, ok := err.(pg.Error)
 	if !ok {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	class := e.Field('C')
 	if class == "" {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	code, ok := p.mp[class]
 	if ok {
 		return code
 	}
 	if len(class) < 2 {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	code, ok = p.mp[class[:2]]
 	if !ok {
-		return cgerrors.ErrorCode_Internal
+		return cgerrors.CodeInternal
 	}
 	return code
 }

@@ -232,7 +232,7 @@ func (s *EventState) applyHandlingStarted(e *es.Event) error {
 	}
 
 	if h.totalFailures > s.maxFailures {
-		return cgerrors.New("", "too many handle tries for given handler", cgerrors.ErrorCode_ResourceExhausted)
+		return cgerrors.New("", "too many handle tries for given handler", cgerrors.CodeResourceExhausted)
 	}
 
 	if h.latestState == StateFailed {

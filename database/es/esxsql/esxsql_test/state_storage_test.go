@@ -126,7 +126,7 @@ func TestPostgresStateStorage(t *testing.T) {
 		EventID:     e1.EventId,
 		HandlerName: testHandler,
 		Err:         "failed",
-		ErrCode:     cgerrors.ErrorCode_Internal,
+		ErrCode:     cgerrors.CodeInternal,
 		RetryNo:     1,
 		Timestamp:   time.Now().UTC(),
 	})

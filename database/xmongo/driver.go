@@ -23,13 +23,13 @@ func (d Driver) Err(err error) error {
 	}
 
 	if mongo.IsTimeout(err) {
-		return cgerrors.Wrap(err, cgerrors.ErrorCode_DeadlineExceeded, "context deadline exceeded")
+		return cgerrors.Wrap(err, cgerrors.CodeDeadlineExceeded, "context deadline exceeded")
 	}
 	if mongo.IsDuplicateKeyError(err) {
 		return cgerrors.Wrap(err, cgerrors.CodeAlreadyExists, "duplicated key")
 	}
 	if mongo.IsNetworkError(err) {
-		return cgerrors.New("", err.Error(), cgerrors.ErrorCode_Unavailable)
+		return cgerrors.New("", err.Error(), cgerrors.CodeUnavailable)
 	}
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return cgerrors.ErrNotFound(err.Error())
@@ -53,16 +53,16 @@ func (d Driver) ErrWrapf(err error, format string, args ...interface{}) error {
 // ErrorCode implements database.Driver interface.
 func (d Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	if errors.Is(err, context.Canceled) {
-		return cgerrors.ErrorCode_Canceled
+		return cgerrors.CodeCanceled
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return cgerrors.ErrorCode_DeadlineExceeded
+		return cgerrors.CodeDeadlineExceeded
 	}
 	if mongo.IsTimeout(err) {
-		return cgerrors.ErrorCode_DeadlineExceeded
+		return cgerrors.CodeDeadlineExceeded
 	}
 	if mongo.IsDuplicateKeyError(err) {
-		return cgerrors.ErrorCode_AlreadyExists
+		return cgerrors.CodeAlreadyExists
 	}
 	if mongo.IsNetworkError(err) {
 		return cgerrors.ErrorCode_Unavailable

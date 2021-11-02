@@ -23,7 +23,7 @@ func RunService(ctx context.Context, s RunnerCloser) error {
 	go func(s Runner, cancel context.CancelFunc) {
 		var err error
 		if err = s.Run(); err != nil {
-			if cgerrors.Code(err) != cgerrors.ErrorCode_Canceled {
+			if cgerrors.Code(err) != cgerrors.CodeCanceled {
 				xlog.Errorf("ListenAndServe failed: %v", err)
 				errorChan <- err
 			} else {

@@ -71,18 +71,18 @@ func (m *MySQLDriver) CanRetry(err error) bool {
 func (m *MySQLDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	mySQLErr, ok := err.(*mysql.MySQLError)
 	if !ok {
-		if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+		if code := cgerrors.Code(err); code != cgerrors.CodeUnknown {
 			return code
 		}
 		// Otherwise check if it sql.Err* or other errors from mysql package
 		switch err {
 		case mysql.ErrInvalidConn, mysql.ErrNoTLS, mysql.ErrOldProtocol,
 			mysql.ErrMalformPkt, sql.ErrTxDone:
-			return cgerrors.ErrorCode_Internal
+			return cgerrors.CodeInternal
 		case sql.ErrNoRows:
-			return cgerrors.ErrorCode_NotFound
+			return cgerrors.CodeNotFound
 		default:
-			return cgerrors.ErrorCode_Unknown
+			return cgerrors.CodeUnknown
 		}
 	}
 
@@ -96,7 +96,7 @@ func (m *MySQLDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	// Otherwise check if given sqlstate is in the codeMap
 	sqlState, ok := m.stateMap[mySQLErr.Number]
 	if !ok || len(sqlState) != 5 {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	c, ok = m.codeMap[sqlState]
 	if ok {
@@ -110,5 +110,5 @@ func (m *MySQLDriver) ErrorCode(err error) cgerrors.ErrorCode {
 	if ok {
 		return c
 	}
-	return cgerrors.ErrorCode_Unknown
+	return cgerrors.CodeUnknown
 }

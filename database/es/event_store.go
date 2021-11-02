@@ -112,7 +112,7 @@ func (e *Store) LoadEventsWithSnapshot(ctx context.Context, agg Aggregate) error
 	snap, err := e.storage.GetSnapshot(ctx, b.id, b.aggType, b.version)
 	isNotFound := false
 	if err != nil {
-		isNotFound = e.storage.ErrorCode(err) == cgerrors.ErrorCode_NotFound
+		isNotFound = e.storage.ErrorCode(err) == cgerrors.CodeNotFound
 		if !isNotFound {
 			return e.err("getting aggregate snapshot failed", err)
 		}
@@ -194,7 +194,7 @@ func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 		// Everytime when the save fails due to the already exists error.
 		// It means that there already is an event with provided revision.
 		// In given case in order to apply the events
-		if e.storage.ErrorCode(err) != cgerrors.ErrorCode_AlreadyExists {
+		if e.storage.ErrorCode(err) != cgerrors.CodeAlreadyExists {
 			return e.err("saving events failed", err)
 		}
 

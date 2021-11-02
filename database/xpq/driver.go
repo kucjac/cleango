@@ -48,19 +48,19 @@ func (d *Driver) CustomErrorCode(class string, code cgerrors.ErrorCode) {
 // ErrorCode implements xservice.Driver interface.
 func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	if errors.Is(err, sql.ErrNoRows) {
-		return cgerrors.ErrorCode_NotFound
+		return cgerrors.CodeNotFound
 	}
 	if errors.Is(err, sql.ErrConnDone) || errors.Is(err, sql.ErrTxDone) {
-		return cgerrors.ErrorCode_Unavailable
+		return cgerrors.CodeUnavailable
 	}
 
-	if code := cgerrors.Code(err); code != cgerrors.ErrorCode_Unknown {
+	if code := cgerrors.Code(err); code != cgerrors.CodeUnknown {
 		return code
 	}
 
 	e, ok := err.(*pq.Error)
 	if !ok {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	code, ok := d.mp[string(e.Code)]
 	if ok {
@@ -68,14 +68,14 @@ func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	}
 	class := e.Code.Class()
 	if class == "" {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	if len(class) < 2 {
-		return cgerrors.ErrorCode_Unknown
+		return cgerrors.CodeUnknown
 	}
 	code, ok = d.mp[string(class)]
 	if !ok {
-		return cgerrors.ErrorCode_Internal
+		return cgerrors.CodeInternal
 	}
 	return code
 }

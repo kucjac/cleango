@@ -6,7 +6,7 @@ import (
 
 // IsDuplicatedError checks if given error states for the mysql duplicated input error.
 func IsDuplicatedError(err error) bool {
-	return ErrorCode(err) == cgerrors.ErrorCode_AlreadyExists
+	return ErrorCode(err) == cgerrors.CodeAlreadyExists
 }
 
 // ErrorCode gets the mysql based error code from input error.

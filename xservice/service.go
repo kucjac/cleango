@@ -120,7 +120,7 @@ func (s *Service) serve(ctx context.Context) error {
 	go func(cancel context.CancelFunc) {
 		var err error
 		if err = s.run(); err != nil {
-			if cgerrors.Code(err) != cgerrors.ErrorCode_Canceled {
+			if cgerrors.Code(err) != cgerrors.CodeCanceled {
 				xlog.Errorf("running service: %s failed: %v", s.name, err)
 				errorChan <- err
 			} else {

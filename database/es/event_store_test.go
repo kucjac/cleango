@@ -93,7 +93,7 @@ func TestStore(t *testing.T) {
 			// The snapshot error is not found.
 			storage.EXPECT().
 				ErrorCode(gomock.Any()).
-				Return(cgerrors.ErrorCode_NotFound)
+				Return(cgerrors.CodeNotFound)
 
 			storage.EXPECT().
 				GetSnapshot(ctx, aggId, aggregateType, int64(1)).
@@ -116,7 +116,7 @@ func TestStore(t *testing.T) {
 			// The snapshot error is not found.
 			storage.EXPECT().
 				ErrorCode(gomock.Any()).
-				Return(cgerrors.ErrorCode_NotFound)
+				Return(cgerrors.CodeNotFound)
 
 			storage.EXPECT().
 				GetSnapshot(ctx, aggId, aggregateType, int64(1)).
@@ -293,10 +293,10 @@ func TestStore(t *testing.T) {
 				SaveEvents(ctx, agg.Base.UncommittedEvents()).
 				Return(errors.New("event with given revision already exists"))
 
-			storage.EXPECT().ErrorCode(gomock.Any()).Return(cgerrors.ErrorCode_AlreadyExists)
+			storage.EXPECT().ErrorCode(gomock.Any()).Return(cgerrors.CodeAlreadyExists)
 
 			// The snapshot is not found.
-			storage.EXPECT().ErrorCode(gomock.Any()).Return(cgerrors.ErrorCode_NotFound)
+			storage.EXPECT().ErrorCode(gomock.Any()).Return(cgerrors.CodeNotFound)
 			storage.EXPECT().
 				GetSnapshot(ctx, aggId, aggregateType, int64(1)).
 				Return(nil, errors.New("snapshot not found"))

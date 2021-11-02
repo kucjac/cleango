@@ -81,7 +81,7 @@ func (s *storage) NewCursor(ctx context.Context, aggType string, aggVersion int6
 // Err handles error message with given driver.
 func (s *storage) Err(err error) error {
 	c := s.conn.ErrorCode(err)
-	if c == cgerrors.ErrorCode_AlreadyExists {
+	if c == cgerrors.CodeAlreadyExists {
 		return cgerrors.ErrAlreadyExists("event revision already exists")
 	}
 	if cgerrors.Is(err, context.DeadlineExceeded) {

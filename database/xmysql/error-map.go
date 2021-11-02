@@ -5,18 +5,18 @@ import (
 )
 
 var mysqlErrMap = map[interface{}]cgerrors.ErrorCode{
-	"08": cgerrors.ErrorCode_Internal,
-	"22": cgerrors.ErrorCode_Internal,
-	"25": cgerrors.ErrorCode_Internal,
-	"42": cgerrors.ErrorCode_Internal,
-	"XA": cgerrors.ErrorCode_Internal,
+	"08": cgerrors.CodeInternal,
+	"22": cgerrors.CodeInternal,
+	"25": cgerrors.CodeInternal,
+	"42": cgerrors.CodeInternal,
+	"XA": cgerrors.CodeInternal,
 
-	"08S01": cgerrors.ErrorCode_Internal,
-	"08001": cgerrors.ErrorCode_Internal,
-	"21000": cgerrors.ErrorCode_Internal,
+	"08S01": cgerrors.CodeInternal,
+	"08001": cgerrors.CodeInternal,
+	"21000": cgerrors.CodeInternal,
 
-	"22000": cgerrors.ErrorCode_Internal,
-	"22007": cgerrors.ErrorCode_Internal,
+	"22000": cgerrors.CodeInternal,
+	"22007": cgerrors.CodeInternal,
 	"23000": cgerrors.ErrorCode_AlreadyExists,
 	"25000": cgerrors.ErrorCode_Internal,
 	"28000": cgerrors.ErrorCode_Internal,

@@ -60,9 +60,9 @@ func (g *Adapter) Do(ctx context.Context, db *gorm.DB, f func(ctx context.Contex
 func (g *Adapter) Err(err error) error {
 	code := g.driver.ErrorCode(err)
 	switch code {
-	case cgerrors.ErrorCode_AlreadyExists:
+	case cgerrors.CodeAlreadyExists:
 		return cgerrors.ErrAlreadyExistsf("already exists: %v", err)
-	case cgerrors.ErrorCode_NotFound:
+	case cgerrors.CodeNotFound:
 		return cgerrors.ErrNotFound("not found")
 	default:
 		return cgerrors.New("", err.Error(), code)

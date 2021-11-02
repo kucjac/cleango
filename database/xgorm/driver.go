@@ -41,11 +41,11 @@ func (d *Driver) DriverName() string {
 func (d *Driver) ErrorCode(err error) cgerrors.ErrorCode {
 	switch err {
 	case gorm.ErrRecordNotFound:
-		return cgerrors.ErrorCode_NotFound
+		return cgerrors.CodeNotFound
 	case gorm.ErrInvalidTransaction, gorm.ErrNotImplemented, gorm.ErrMissingWhereClause, gorm.ErrUnsupportedRelation, gorm.ErrPrimaryKeyRequired, gorm.ErrModelValueRequired, gorm.ErrUnsupportedDriver, gorm.ErrDryRunModeUnsupported, gorm.ErrInvalidDB, gorm.ErrRegistered, gorm.ErrInvalidField:
-		return cgerrors.ErrorCode_Internal
+		return cgerrors.CodeInternal
 	case gorm.ErrEmptySlice, gorm.ErrInvalidData, gorm.ErrInvalidValue, gorm.ErrInvalidValueOfLength:
-		return cgerrors.ErrorCode_InvalidArgument
+		return cgerrors.CodeInvalidArgument
 	default:
 		return d.base.ErrorCode(err)
 	}
