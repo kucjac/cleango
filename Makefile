@@ -26,3 +26,7 @@ drop-module-replaces:
 update-deps:
 	@echo "Updating modules dependencies..."
 	@./internal/testing/update_deps.sh
+
+run-checks:
+	@echo "Running repository checks..."
+	@./internal/testing/runchecks.sh

@@ -3,6 +3,7 @@ package xmongo
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -25,7 +26,7 @@ func (d Driver) Err(err error) error {
 		return cgerrors.Wrap(err, cgerrors.ErrorCode_DeadlineExceeded, "context deadline exceeded")
 	}
 	if mongo.IsDuplicateKeyError(err) {
-		return cgerrors.ErrAlreadyExists(err)
+		return cgerrors.Wrap(err, cgerrors.CodeAlreadyExists, "duplicated key")
 	}
 	if mongo.IsNetworkError(err) {
 		return cgerrors.New("", err.Error(), cgerrors.ErrorCode_Unavailable)
@@ -35,6 +36,18 @@ func (d Driver) Err(err error) error {
 	}
 
 	return cgerrors.ErrUnknown(err)
+}
+
+// ErrWrap wraps an error, checks its related code and sets the detail as the args.
+func (d Driver) ErrWrap(err error, args ...interface{}) error {
+	code := d.ErrorCode(err)
+	return cgerrors.Wrap(err, code, fmt.Sprint(args...))
+}
+
+// ErrWrapf wraps an error and sets current error formatted details.
+func (d Driver) ErrWrapf(err error, format string, args ...interface{}) error {
+	code := d.ErrorCode(err)
+	return cgerrors.Wrapf(err, code, format, args...)
 }
 
 // ErrorCode implements database.Driver interface.
