@@ -8,3 +8,5 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 )
+
+replace github.com/kucjac/cleango => ../../

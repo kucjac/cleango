@@ -9,3 +9,5 @@ require (
 	gocloud.dev/pubsub/natspubsub v0.24.0
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 )
+
+replace github.com/kucjac/cleango => ../../../
