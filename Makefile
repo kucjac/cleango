@@ -30,3 +30,7 @@ update-deps:
 run-checks:
 	@echo "Running repository checks..."
 	@./internal/testing/runchecks.sh
+
+gomod-cleanup:
+	@echo "Cleaning golang modules..."
+	@./internal/testing/gomodcleanup.sh
