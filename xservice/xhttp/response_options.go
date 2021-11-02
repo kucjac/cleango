@@ -27,6 +27,13 @@ func ResponseWithContentType(contentType string) ResponseOption {
 	}
 }
 
+// ResponseWithDebug is an option to the http response that sets provided content type.
+func ResponseWithDebug(debug bool) ResponseOption {
+	return func(e *ResponseOptions) {
+		e.Debug = debug
+	}
+}
+
 // ResponseOption is an option for the error function.
 type ResponseOption func(e *ResponseOptions)
 
@@ -34,4 +41,5 @@ type ResponseOption func(e *ResponseOptions)
 type ResponseOptions struct {
 	Status  int
 	Headers map[string]string
+	Debug   bool
 }

@@ -2,6 +2,7 @@ package xhttp
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"google.golang.org/grpc/codes"
@@ -18,20 +19,36 @@ func WriteErrJSON(rw http.ResponseWriter, err error, options ...ResponseOption) 
 		option(o)
 	}
 
-	e, ok := err.(*cgerrors.Error)
-	if !ok {
-		writeUndefinedError(err, rw, o)
+	var e *cgerrors.Error
+	if errors.As(err, &e) {
+		writeDefinedError(rw, e, o)
 		return
 	}
-	writeDefinedError(rw, e, o)
+	writeUndefinedError(err, rw, o)
+
 }
 
 func writeDefinedError(rw http.ResponseWriter, e *cgerrors.Error, o *ResponseOptions) {
+	meta := e.Meta
+	if !o.Debug && e.Meta != nil {
+		_, ok := e.Meta[cgerrors.MetaKeyWrapped]
+		if ok {
+			temp := map[string]string{}
+			for k, v := range e.Meta {
+				if k == cgerrors.MetaKeyWrapped {
+					continue
+				}
+				temp[k] = v
+			}
+			e.Meta = temp
+		}
+	}
 	data, err := json.Marshal(e)
 	if err != nil {
 		writeUndefinedError(e, rw, o)
 		return
 	}
+	e.Meta = meta
 
 	c := o.Status
 	if c == 0 {
@@ -76,7 +93,6 @@ func writeUndefinedError(err error, rw http.ResponseWriter, o *ResponseOptions) 
 	writeHeaders(rw, o)
 	rw.WriteHeader(c)
 	rw.Write(data)
-	return
 }
 
 func writeHeaders(rw http.ResponseWriter, o *ResponseOptions) {
