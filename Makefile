@@ -1,4 +1,3 @@
-
 rebuild-messages-event-proto:
 	@echo "Rebuilding es/event.proto..."
 	@protoc -I=. --go-grpc_out=. --go_out=. --go_opt=paths=source_relative \
@@ -23,3 +22,7 @@ add-module-replaces:
 drop-module-replaces:
 	@echo "Adding module replaces..."
 	@go run internal/releasehelper/releasehelper.go dropreplace
+
+update-deps:
+	@echo "Updating modules dependencies..."
+	@./internal/testing/update_deps.sh
