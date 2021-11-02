@@ -87,7 +87,7 @@ func (s *Service) Close(ctx context.Context) error {
 
 	errChan := make(chan error)
 	for job := range jobs {
-		xlog.Debugf("Closing: %T", job)
+		xlog.Infof("Closing: %T", job)
 		s.closeCloser(ctx, job, wg, errChan)
 	}
 
