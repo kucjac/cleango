@@ -10,6 +10,15 @@ import (
 	"github.com/kucjac/cleango/xlog"
 )
 
+// Cursors is the structure that contains all the page cursors.
+type Cursors struct {
+	This  string `json:"this,omitempty"`
+	Prev  string `json:"prev,omitempty"`
+	Next  string `json:"next,omitempty"`
+	First string `json:"first,omitempty"`
+	Last  string `json:"last,omitempty"`
+}
+
 // CursorType is the enumerator that defines the type of the cursor.
 type CursorType uint8
 
