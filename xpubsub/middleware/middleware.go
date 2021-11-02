@@ -2,6 +2,7 @@ package pubsubmiddleware
 
 import (
 	"context"
+	"errors"
 	"runtime/debug"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 // Key to use when setting the message ID.
 type ctxKeyMessageID int
 
-var subIdGen = uniqueid.NextGenerator("subscription")
+var subIDGen = uniqueid.NextGenerator("subscription")
 
 // MessageIDKey is the key that holds the unique request ID in a request context.
 const MessageIDKey ctxKeyMessageID = 0
@@ -36,7 +37,7 @@ func CtxSubscriptionID(ctx context.Context) string {
 	return id
 }
 
-// Acker is a middleware that checks if the subsequent handlers returns an error and on success Ackes them.
+// Acker is a middleware that checks if the subsequent handlers returns an error and on success ackes them.
 // In case of failure it Nacks the message if it is possible.
 func Acker(h xpubsub.Handler) xpubsub.Handler {
 	return xpubsub.HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
@@ -75,7 +76,7 @@ func Logger(next xpubsub.Handler) xpubsub.Handler {
 	return xpubsub.HandlerFunc(func(ctx context.Context, m *pubsub.Message) error {
 		fields := logrus.Fields{
 			"subscriptionId": CtxSubscriptionID(ctx),
-			"topic":          CtxSubject(ctx),
+			"subject":        CtxSubject(ctx),
 		}
 		reqID := GetMessageID(ctx)
 		if reqID != "" {
@@ -89,7 +90,8 @@ func Logger(next xpubsub.Handler) xpubsub.Handler {
 		)
 		err := next.Handle(ctx, m)
 		if err != nil {
-			if e, ok := err.(*cgerrors.Error); ok {
+			var e *cgerrors.Error
+			if errors.As(err, &e) {
 				code = e.Code
 				msg = e.Detail
 			} else {
@@ -119,8 +121,7 @@ func MessageID(next xpubsub.Handler) xpubsub.Handler {
 		if ctx == nil {
 			ctx = context.Background()
 		}
-		messageId := subIdGen.NextId()
-		ctx = context.WithValue(ctx, MessageIDKey, messageId)
+		ctx = context.WithValue(ctx, MessageIDKey, subIDGen.NextId())
 
 		return next.Handle(ctx, m)
 	})

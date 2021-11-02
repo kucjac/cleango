@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-//go:generate mockgen -destination=pubsubmock/topic_gen.go -package=pubsubmock . Topic
+//go:generate mockgen -destination=mock/topic_gen.go -package=pubsubmock . Topic
 
 // Compile time check if pubsub.Topic implements Topic interface.
 var _ Topic = (*pubsub.Topic)(nil)

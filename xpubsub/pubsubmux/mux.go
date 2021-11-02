@@ -26,7 +26,6 @@ type subscriber struct {
 // Mux is a subscriber router. It provides an easy interfaces for starting and listening on the subscriptions.
 // Implements xservice.RunnerCloser interface.
 type Mux struct {
-	inline      bool
 	maxHandlers int
 	middlewares xpubsub.Middlewares
 	routes      []route
@@ -36,6 +35,7 @@ type Mux struct {
 	ctx         context.Context
 	cf          context.CancelFunc
 	subscribers []subscriber
+	inline      bool
 	running     bool
 	gen         uniqueid.Generator
 }
@@ -145,6 +145,18 @@ func (m *Mux) Subscription(sub *pubsub.Subscription, hf xpubsub.HandlerFunc, sub
 	m.subRoutes = append(m.subRoutes, sr)
 }
 
+// SubjectSubscription registers provided subscription with matching subject to be handled by provided xpubsub.HandlerFunc.
+func (m *Mux) SubjectSubscription(ss *xpubsub.SubjectSubscription, hf xpubsub.HandlerFunc) {
+	sr := subscriptionRoute{
+		sub:         ss.Subscription,
+		h:           hf,
+		middlewares: m.middlewares,
+		maxHandlers: m.maxHandlers,
+		subject:     ss.Subject,
+	}
+	m.subRoutes = append(m.subRoutes, sr)
+}
+
 func (m *Mux) close(ctx context.Context) error {
 	for _, s := range m.subscribers {
 		fields := logrus.Fields{"id": s.id}
@@ -161,7 +173,6 @@ func (m *Mux) close(ctx context.Context) error {
 
 func (m *Mux) listenOnRoutes() error {
 	for _, r := range m.routes {
-
 		sub, err := pubsub.OpenSubscription(m.ctx, r.subject)
 		if err != nil {
 			return err
