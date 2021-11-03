@@ -27,6 +27,7 @@ func New() *Log {
 	l := logrus.New()
 
 	l.SetFormatter(NewTextFormatter(true))
+	l.AddHook(NewCallerHook([]logrus.Level{logrus.FatalLevel, logrus.ErrorLevel, logrus.PanicLevel, logrus.WarnLevel, logrus.TraceLevel}))
 	l.SetLevel(logrus.TraceLevel)
 	return &Log{Logger: l}
 }

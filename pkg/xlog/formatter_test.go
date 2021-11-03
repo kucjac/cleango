@@ -1,4 +1,4 @@
-package xlog
+package xlog_test
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kucjac/cleango/pkg/xlog"
 	"github.com/stretchr/testify/require"
 
 	"github.com/sirupsen/logrus"
@@ -14,8 +15,9 @@ import (
 
 func TestInfo(t *testing.T) {
 	buf := new(bytes.Buffer)
-	lx := New()
-	f := NewTextFormatter(false)
+	lx := xlog.New()
+	lx.SetReportCaller(true)
+	f := xlog.NewTextFormatter(false)
 	lx.SetFormatter(f)
 	lx.SetOutput(buf)
 	lx.Info("$TestT$")
@@ -46,18 +48,18 @@ func TestInfo(t *testing.T) {
 
 func TestErrorFormat(t *testing.T) {
 	buf := new(bytes.Buffer)
-	lx := New()
-	f := NewTextFormatter(false)
+	lx := xlog.New()
+	f := xlog.NewTextFormatter(false)
 	lx.SetLevel(logrus.TraceLevel)
 	lx.SetFormatter(f)
 	lx.SetOutput(buf)
-	req := HTTPRequest{
+	req := xlog.HTTPRequest{
 		RequestMethod: "GET",
 		RequestURL:    "/wuf",
 		Status:        200,
 		Latency:       time.Second.String(),
 	}
-	lx.WithField(HTTPRequestKey, req).Debug(logrus.DebugLevel)
+	lx.WithField(xlog.HTTPRequestKey, req).Debug(logrus.DebugLevel)
 	str := buf.String()
 	assert.Equal(t, "DEBUG [GET] 200 |       1s |            /wuf\n", str)
 }

@@ -3,8 +3,10 @@ package xlog
 import (
 	"bytes"
 	"fmt"
-	"sort"
+	"io"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -15,8 +17,27 @@ import (
 // this is useful for formatting logs in different environments.
 // This formatter will format logs for terminal and testing.
 type TextFormatter struct {
+	// TimestampFormat sets the format used for marshaling timestamps.
+	// The format to use is the same than for time.Format or time.Parse from the standard
+	// library.
+	// The standard Library already provides a set of predefined format.
+	TimestampFormat string
+
 	// Force disabling colors. For a TTY colors are enabled by default.
 	UseColors bool
+
+	// DisableTimestamp allows disabling automatic timestamps in output
+	DisableTimestamp bool
+
+	// DataKey allows users to put all the log entry parameters into a nested dictionary at a given key.
+	DataKey string
+
+	// CallerPrettyfier can be set by the user to modify the content
+	// of the function and file keys in the json data when ReportCaller is
+	// activated. If any of the returned value is the empty string the
+	// corresponding key will be removed from fields.
+	CallerPrettyfier func(*runtime.Frame) (function string, file string)
+
 	// Color scheme to use.
 	scheme *compiledColorScheme
 }
@@ -24,7 +45,8 @@ type TextFormatter struct {
 // NewTextFormatter creates new logrus based text formatter.
 func NewTextFormatter(colors bool) *TextFormatter {
 	f := &TextFormatter{
-		scheme: noColorsColorScheme,
+		scheme:          noColorsColorScheme,
+		TimestampFormat: time.RFC3339,
 	}
 	if colors {
 		f.scheme = defaultCompiledColorScheme
@@ -39,32 +61,60 @@ func (f *TextFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		return nil, err
 	}
 	if err == nil {
-		entry.Message = fmt.Sprintf(
-			"[%s] %d | %8v | %15s",
-			x.RequestMethod,
-			x.Status,
-			x.Latency,
-			x.RequestURL,
-		)
+		entry.Message = fmt.Sprintf("[%s] %d | %8v | %15s", x.RequestMethod, x.Status, x.Latency, x.RequestURL)
 		delete(entry.Data, HTTPRequestKey)
 	}
-	var b *bytes.Buffer
-	var keys = make([]string, 0, len(entry.Data))
-	for k := range entry.Data {
-		keys = append(keys, k)
+
+	data := make(logrus.Fields, len(entry.Data)+4)
+	for k, v := range entry.Data {
+		switch v := v.(type) {
+		case error:
+			data[k] = v.Error()
+		default:
+			data[k] = v
+		}
 	}
-	sort.Strings(keys)
+	if f.DataKey != "" {
+		newData := make(logrus.Fields, 4)
+		newData[f.DataKey] = data
+		data = newData
+	}
+
+	tsFormat := f.TimestampFormat
+	if tsFormat == "" {
+		tsFormat = time.RFC3339
+	}
+
+	if !f.DisableTimestamp {
+		data[logrus.FieldKeyTime] = entry.Time.Format(tsFormat)
+	}
+
+	if entry.HasCaller() {
+		funcVal := entry.Caller.Function
+		fileVal := fmt.Sprintf("%s:%d", entry.Caller.File, entry.Caller.Line)
+		if f.CallerPrettyfier != nil {
+			funcVal, fileVal = f.CallerPrettyfier(entry.Caller)
+		}
+		if funcVal != "" {
+			data["func"] = funcVal
+		}
+		if fileVal != "" {
+			data["file"] = fileVal
+		}
+	}
+
+	var b *bytes.Buffer
 	if entry.Buffer != nil {
 		b = entry.Buffer
 	} else {
 		b = &bytes.Buffer{}
 	}
-	f.printColored(b, entry, keys)
+	f.printColored(b, entry, data)
 	b.WriteByte('\n')
 	return b.Bytes(), nil
 }
 
-func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys []string) {
+func (f *TextFormatter) printColored(b io.Writer, entry *logrus.Entry, data logrus.Fields) {
 	var levelColor func(string) string
 	var levelText string
 	switch entry.Level {
@@ -91,8 +141,7 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	message := entry.Message
 	messageFormat := "%s"
 	fmt.Fprintf(b, "%s "+messageFormat, level, message)
-	for _, k := range keys {
-		v := entry.Data[k]
+	for k, v := range data {
 		data := fmt.Sprintf("%+v", v)
 		fmt.Fprintf(b, " %s=%q", fmt.Sprintf("\"%s\"", levelColor(k)), data)
 	}
