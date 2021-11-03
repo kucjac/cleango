@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -141,8 +142,22 @@ func (f *TextFormatter) printColored(b io.Writer, entry *logrus.Entry, data logr
 	message := entry.Message
 	messageFormat := "%s"
 	fmt.Fprintf(b, "%s "+messageFormat, level, message)
+	type pair struct {
+		key   string
+		value interface{}
+	}
+	pairs := make([]pair, len(data))
+	var i int
 	for k, v := range data {
-		data := fmt.Sprintf("%+v", v)
-		fmt.Fprintf(b, " %s=%q", fmt.Sprintf("\"%s\"", levelColor(k)), data)
+		pairs[i] = pair{key: k, value: v}
+		i++
+	}
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].key < pairs[j].key
+	})
+
+	for _, p := range pairs {
+		data := fmt.Sprintf("%+v", p.value)
+		fmt.Fprintf(b, " %s=%q", fmt.Sprintf("\"%s\"", levelColor(p.key)), data)
 	}
 }

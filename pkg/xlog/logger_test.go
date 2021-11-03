@@ -12,7 +12,9 @@ import (
 func TestLog(t *testing.T) {
 	buf := new(bytes.Buffer)
 	lx := xlog.New()
-	lx.SetFormatter(xlog.NewTextFormatter(false))
+	tf := xlog.NewTextFormatter(false)
+	tf.DisableTimestamp = true
+	lx.SetFormatter(tf)
 	lx.SetOutput(buf)
 	lx.WithField("msg", "helloooo").Print("hello")
 	str := buf.String()

@@ -31,6 +31,11 @@ func init() {
 	minimumCallerDepth = 1
 }
 
+// DefaultCallerHook gets the default caller hook that sets up the caller for the level fatal, error, panic, warn and trace.
+func DefaultCallerHook() *CallerHook {
+	return NewCallerHook([]logrus.Level{logrus.FatalLevel, logrus.ErrorLevel, logrus.PanicLevel, logrus.WarnLevel, logrus.TraceLevel})
+}
+
 // NewCallerHook creates a new CallerHook.
 func NewCallerHook(levels []logrus.Level) *CallerHook {
 	return &CallerHook{

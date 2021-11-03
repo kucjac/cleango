@@ -15,9 +15,14 @@ func TestCallerHook(t *testing.T) {
 	lx := xlog.New()
 	lx.AddHook(xlog.NewCallerHook([]logrus.Level{logrus.InfoLevel}))
 	lx.SetReportCaller(true)
-	lx.SetFormatter(xlog.NewTextFormatter(false))
+	tf := xlog.NewTextFormatter(false)
+	tf.DisableTimestamp = true
+	lx.SetFormatter(tf)
 	lx.SetOutput(buf)
 	lx.WithField("msg", "helloooo").Print("hello")
 	str := buf.String()
-	assert.True(t, strings.Contains(str, "INFO  hello \"msg\"=\"helloooo\""))
+	assert.True(t, strings.Contains(str, "INFO  hello"))
+	assert.True(t, strings.Contains(str, "\"msg\"=\"helloooo\""))
+	assert.True(t, strings.Contains(str, "\"func\"=\"github.com/kucjac/cleango/pkg/xlog_test.TestCallerHook\""))
+	assert.True(t, strings.Contains(str, "github.com/kucjac/cleango/pkg/xlog/caller_test.go:22"), str)
 }

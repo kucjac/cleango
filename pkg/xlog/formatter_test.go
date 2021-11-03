@@ -16,8 +16,8 @@ import (
 func TestInfo(t *testing.T) {
 	buf := new(bytes.Buffer)
 	lx := xlog.New()
-	lx.SetReportCaller(true)
 	f := xlog.NewTextFormatter(false)
+	f.DisableTimestamp = true
 	lx.SetFormatter(f)
 	lx.SetOutput(buf)
 	lx.Info("$TestT$")
@@ -50,6 +50,7 @@ func TestErrorFormat(t *testing.T) {
 	buf := new(bytes.Buffer)
 	lx := xlog.New()
 	f := xlog.NewTextFormatter(false)
+	f.DisableTimestamp = true
 	lx.SetLevel(logrus.TraceLevel)
 	lx.SetFormatter(f)
 	lx.SetOutput(buf)
