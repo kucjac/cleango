@@ -4,8 +4,6 @@ go 1.16
 
 require (
 	github.com/jmoiron/sqlx v1.3.4
-	github.com/kucjac/cleango v0.0.27
+	github.com/kucjac/cleango v0.0.28
 	github.com/sirupsen/logrus v1.8.1
 )
-
-replace github.com/kucjac/cleango => ../../

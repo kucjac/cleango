@@ -3,7 +3,7 @@ module github.com/kucjac/cleango/database/xmongo
 go 1.17
 
 require (
-	github.com/kucjac/cleango v0.0.27
+	github.com/kucjac/cleango v0.0.28
 	go.mongodb.org/mongo-driver v1.7.3
 )
 
@@ -30,5 +30,3 @@ require (
 	google.golang.org/grpc v1.42.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
-
-replace github.com/kucjac/cleango => ../../
