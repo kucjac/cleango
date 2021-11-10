@@ -39,6 +39,16 @@ func (s *Service) WithCloser(closer Closer) {
 	s.closers = append(s.closers, closer)
 }
 
+type cleanupCloser func()
+
+// Close implements xservice.Closer interface.
+func (c cleanupCloser) Close(context.Context) error { c(); return nil }
+
+// WithCleanupFunc adds the cleanup function to the list of service closers.
+func (s *Service) WithCleanupFunc(cleanupFunc func()) {
+	s.closers = append(s.closers, cleanupCloser(cleanupFunc))
+}
+
 // Run establish connection for all dialers in the service.
 func (s *Service) Run() error {
 	if err := s.canRun(); err != nil {
@@ -87,7 +97,11 @@ func (s *Service) Close(ctx context.Context) error {
 
 	errChan := make(chan error)
 	for job := range jobs {
-		xlog.Infof("Closing: %T", job)
+		if _, isCleanup := job.(cleanupCloser); isCleanup {
+			xlog.Info("Closing cleanup function")
+		} else {
+			xlog.Infof("Closing: %T", job)
+		}
 		s.closeCloser(ctx, job, wg, errChan)
 	}
 
