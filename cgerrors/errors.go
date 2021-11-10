@@ -3,6 +3,7 @@
 package cgerrors
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -138,14 +139,17 @@ func IsAlreadyExists(err error) bool {
 	return Code(err) == CodeAlreadyExists
 }
 
-// IsInvalidArgument checks if given error means that given entity already exists.
+// IsInvalidArgument checks if given error contains a CodeInvalidArgument.
 func IsInvalidArgument(err error) bool {
 	return Code(err) == CodeInvalidArgument
 }
 
 // IsDeadlineExceeded checks if given error is of type Deadline Exceeded.
 func IsDeadlineExceeded(err error) bool {
-	return Code(err) == CodeInternal
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	return Code(err) == CodeDeadlineExceeded
 }
 
 // IsUnauthenticated checks if given error is an unauthenticated error.
@@ -158,14 +162,19 @@ func IsInternal(err error) bool {
 	return Code(err) == CodeInternal
 }
 
-// IsPermissionDenied checks if given error is of type PermissionDenied.
+// IsPermissionDenied checks if given error is of type CodePermissionDenied.
 func IsPermissionDenied(err error) bool {
 	return Code(err) == CodePermissionDenied
 }
 
-// IsUnimplemented checks if given error contains Unimplemented  code.
+// IsUnimplemented checks if given error contains CodeUnimplemented.
 func IsUnimplemented(err error) bool {
 	return Code(err) == CodeUnimplemented
+}
+
+// IsUnknown checks if given error contains CodeUnknown.
+func IsUnknown(err error) bool {
+	return Code(err) == CodeUnknown
 }
 
 // New generates a custom error.
