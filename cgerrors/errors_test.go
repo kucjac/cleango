@@ -1,23 +1,37 @@
 package cgerrors
 
 import (
-	er "errors"
+	"errors"
 	"testing"
 )
 
 func TestFromError(t *testing.T) {
-	var err error
-	err = ErrNotFoundf("%s", "example")
-	merr := FromError(err)
-	if merr.Code != ErrorCode_NotFound {
-		t.Fatalf("invalid conversation %v != %v", err, merr)
-	}
-	err = er.New(err.Error())
-	merr = FromError(err)
-	if merr.Code != ErrorCode_NotFound {
-		t.Fatalf("invalid conversation %v != %v", err, merr)
-	}
+	err := ErrNotFoundf("%s", "example")
+	t.Run("cgerrors.Error", func(t *testing.T) {
+		err2 := FromError(err)
+		if !Equal(err, err2) {
+			t.Fatalf("invalid conversation %v != %v", err, err2)
+		}
+	})
 
+	t.Run("Simple", func(t *testing.T) {
+		stdErr := errors.New(err.Error())
+		err2 := FromError(stdErr)
+		if !Equal(err2, err) {
+			t.Fatalf("invalid conversation %v != %v", err, err2)
+		}
+	})
+
+	t.Run("GRPCStatus", func(t *testing.T) {
+		// Get the GRPC Status from the message.
+		grpcErr := ToGRPCError(err)
+
+		err2 := FromError(grpcErr)
+
+		if !Equal(err, err2) {
+			t.Errorf("invalid grpc status conversion: GRPC Err: %v, Result: %v, Expected: %v", grpcErr, err2, err)
+		}
+	})
 }
 
 func TestEqual(t *testing.T) {
@@ -28,18 +42,17 @@ func TestEqual(t *testing.T) {
 		t.Fatal("errors must be equal")
 	}
 
-	err3 := er.New("my test err")
+	err3 := errors.New("my test err")
 	if Equal(err1, err3) {
 		t.Fatal("errors must be not equal")
 	}
-
 }
 
 func TestErrors(t *testing.T) {
 	testData := []*Error{
 		{
 			ID:     "test",
-			Code:   ErrorCode_Internal,
+			Code:   CodeInternal,
 			Detail: "Internal error",
 		},
 	}

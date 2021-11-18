@@ -13,7 +13,7 @@ import (
 )
 
 // MetaKeyWrapped adds the error metadata key that keeps the wrapped error value.
-const MetaKeyWrapped = "x-wrapped"
+const MetaKeyWrapped = "x-err-wrapped"
 
 // Error is the error message that has id, it's code and a detail.
 type Error struct {
@@ -92,8 +92,9 @@ type GRPCError interface {
 
 // ToGRPCError converts an error to GRPC status.Status.
 func ToGRPCError(err error) error {
-	if e, ok := err.(GRPCError); ok {
-		return e.GRPCStatus().Err()
+	var ge GRPCError
+	if errors.As(err, &ge) {
+		return ge.GRPCStatus().Err()
 	}
 	return newError(Code(err), err.Error()).GRPCStatus().Err()
 }
@@ -376,9 +377,20 @@ func FromError(err error) *Error {
 		return vErr
 	}
 
+	// Try to decode it from the GRPC Status.
+	s, ok := status.FromError(err)
+	if ok {
+		if e, ok := FromString(s.Message()); ok {
+			return e
+		}
+		return newError(ErrorCode(s.Code()), s.Message())
+	}
+
+	// Check if the error is in raw string form.
 	if e, ok := FromString(err.Error()); ok {
 		return e
 	}
+
 	return newError(Code(err), err.Error())
 }
 
