@@ -12,7 +12,7 @@ import (
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/codec"
 	"github.com/kucjac/cleango/database/es"
-	"github.com/kucjac/cleango/database/es/mockes"
+	mockes "github.com/kucjac/cleango/database/es/mock"
 )
 
 func TestStore(t *testing.T) {

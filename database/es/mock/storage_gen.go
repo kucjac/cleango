@@ -124,21 +124,6 @@ func (mr *MockStorageMockRecorder) ListEventsAfterRevision(arg0, arg1, arg2, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsAfterRevision", reflect.TypeOf((*MockStorage)(nil).ListEventsAfterRevision), arg0, arg1, arg2, arg3)
 }
 
-// NewCursor mocks base method.
-func (m *MockStorage) NewCursor(arg0 context.Context, arg1 string, arg2 int64) (es.Cursor, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewCursor", arg0, arg1, arg2)
-	ret0, _ := ret[0].(es.Cursor)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// NewCursor indicates an expected call of NewCursor.
-func (mr *MockStorageMockRecorder) NewCursor(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewCursor", reflect.TypeOf((*MockStorage)(nil).NewCursor), arg0, arg1, arg2)
-}
-
 // SaveEvents mocks base method.
 func (m *MockStorage) SaveEvents(arg0 context.Context, arg1 []*es.Event) error {
 	m.ctrl.T.Helper()
@@ -290,21 +275,6 @@ func (m *MockTxStorage) ListEventsAfterRevision(arg0 context.Context, arg1, arg2
 func (mr *MockTxStorageMockRecorder) ListEventsAfterRevision(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEventsAfterRevision", reflect.TypeOf((*MockTxStorage)(nil).ListEventsAfterRevision), arg0, arg1, arg2, arg3)
-}
-
-// NewCursor mocks base method.
-func (m *MockTxStorage) NewCursor(arg0 context.Context, arg1 string, arg2 int64) (es.Cursor, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewCursor", arg0, arg1, arg2)
-	ret0, _ := ret[0].(es.Cursor)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// NewCursor indicates an expected call of NewCursor.
-func (mr *MockTxStorageMockRecorder) NewCursor(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewCursor", reflect.TypeOf((*MockTxStorage)(nil).NewCursor), arg0, arg1, arg2)
 }
 
 // Rollback mocks base method.

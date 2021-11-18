@@ -73,11 +73,6 @@ func (s *storage) ErrorCode(err error) cgerrors.ErrorCode {
 	return s.conn.ErrorCode(err)
 }
 
-// NewCursor creates a new cursor.
-func (s *storage) NewCursor(ctx context.Context, aggType string, aggVersion int64) (es.Cursor, error) {
-	return s.newCursor(ctx, aggType, aggVersion), nil
-}
-
 // Err handles error message with given driver.
 func (s *storage) Err(err error) error {
 	c := s.conn.ErrorCode(err)

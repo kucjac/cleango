@@ -7,11 +7,6 @@ import (
 	"github.com/kucjac/cleango/pkg/xlog"
 )
 
-// AggregateFactory is a factory interface used to create new Aggregate models.
-type AggregateFactory interface {
-	New(aggType string, aggVersion int64) Aggregate
-}
-
 // Aggregate is an interface used for the aggregate models
 type Aggregate interface {
 	Apply(e *Event) error

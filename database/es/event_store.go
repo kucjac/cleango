@@ -2,50 +2,42 @@ package es
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/kucjac/cleango/cgerrors"
 	"github.com/kucjac/cleango/codec"
 )
 
-// Generate the mock store.
-//go:generate mockgen -destination=mock.go -package=eventsource . EventStore
+//go:generate mockgen -destination=mock/event_store_gen.go -package=mockes . EventStore
 
 // EventStore is an interface used by the event store to load, commit and create snapshot on aggregates.
 type EventStore interface {
 	// LoadEvents loads all events for given aggregate.
 	LoadEvents(ctx context.Context, aggregate Aggregate) error
-
 	// LoadEventsWithSnapshot loads the latest snapshot with the events that happened after it.
 	LoadEventsWithSnapshot(ctx context.Context, aggregate Aggregate) error
-
 	// Commit commits the event changes done in given aggregate.
 	Commit(ctx context.Context, aggregate Aggregate) error
-
 	// SaveSnapshot saves the snapshot of given aggregate.
 	SaveSnapshot(ctx context.Context, aggregate Aggregate) error
-
 	// StreamEvents opens stream events that matches given request.
 	StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error)
-
-	// StreamAggregates opens aggregate stream for given type and version.
-	StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error)
-
-	// StreamProjections streams the projections based on given aggregate type and version.
-	StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error)
-
 	// SetAggregateBase sets the AggregateBase within an aggregate.
 	SetAggregateBase(agg Aggregate, aggId, aggType string, version int64)
 }
 
 // StreamEventsRequest is a request for the stream events query.
 type StreamEventsRequest struct {
-	AggregateTypes    []string
-	AggregateIDs      []string
+	// AggregateTypes streams the events for selected aggregate types.
+	AggregateTypes []string
+	// AggregateIDs is the filter that streams events for selected aggregate ids.
+	AggregateIDs []string
+	// ExcludeEventTypes is the filter that provides a stream with excluded event types.
 	ExcludeEventTypes []string
-	EventTypes        []string
-	BuffSize          int
+	// EventTypes is the filter that gets only selected event types.
+	EventTypes []string
+	// BuffSize defines the size of the stream channel buffer.
+	BuffSize int
 }
 
 // New creates new EventStore implementation.
@@ -218,30 +210,6 @@ func (e *Store) Commit(ctx context.Context, agg Aggregate) error {
 	}
 }
 
-// StreamAggregates opens up the aggregate streaming channel. The channel would got closed when there is no more aggregate to read
-// or when the context is done.
-// Closing resulting channel would result with a panic.
-func (e *Store) StreamAggregates(ctx context.Context, aggType string, aggVersion int64, factory AggregateFactory) (<-chan Aggregate, error) {
-	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
-	if err != nil {
-		return nil, e.err("creating new cursor", err)
-	}
-
-	l := newAggregateLoader(c, aggType, aggVersion, factory, e.bufferSize)
-	return l.readAggregateChannel()
-}
-
-// StreamProjections streams the projection of given aggregate.
-func (e *Store) StreamProjections(ctx context.Context, aggType string, aggVersion int64, factory ProjectionFactory) (<-chan Projection, error) {
-	c, err := e.storage.NewCursor(ctx, aggType, aggVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	l := newProjectionLoader(e.eventCodec, c, aggType, aggVersion, factory, e.bufferSize)
-	return l.readProjectionChannel()
-}
-
 // StreamEvents opens an event stream that matches given request.
 func (e *Store) StreamEvents(ctx context.Context, req *StreamEventsRequest) (<-chan *Event, error) {
 	c, err := e.storage.StreamEvents(ctx, req)
@@ -255,5 +223,5 @@ func (e *Store) err(msg string, err error) error {
 	if cgerrors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
-	return cgerrors.New("", fmt.Sprintf("%s: %v", msg, err), e.storage.ErrorCode(err))
+	return cgerrors.Wrap(err, e.storage.ErrorCode(err), msg)
 }
