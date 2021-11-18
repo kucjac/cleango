@@ -17,12 +17,12 @@ var ErrorMap = map[string]cgerrors.ErrorCode{
 	"23502": cgerrors.CodeInvalidArgument, // NOT-NULL Violation
 
 	// Class 23 - Integrity violation
-	"23000": cgerrors.ErrorCode_AlreadyExists,
-	"23503": cgerrors.ErrorCode_NotFound, // Foreign Key Violation
-	"23505": cgerrors.ErrorCode_AlreadyExists,
+	"23000": cgerrors.CodeAlreadyExists,
+	"23503": cgerrors.CodeNotFound, // Foreign Key Violation
+	"23505": cgerrors.CodeAlreadyExists,
 
 	// Class 42 - Table
-	"42P06": cgerrors.ErrorCode_AlreadyExists,
-	"42P07": cgerrors.ErrorCode_AlreadyExists,
-	"42712": cgerrors.ErrorCode_AlreadyExists,
+	"42P06": cgerrors.CodeAlreadyExists,
+	"42P07": cgerrors.CodeAlreadyExists,
+	"42712": cgerrors.CodeAlreadyExists,
 }
