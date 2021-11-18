@@ -7,5 +7,7 @@ require (
 	github.com/nats-io/nats.go v1.13.0
 	gocloud.dev v0.24.0
 	gocloud.dev/pubsub/natspubsub v0.24.0
-	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871 // indirect
 )
+
+replace github.com/kucjac/cleango => ../../../
